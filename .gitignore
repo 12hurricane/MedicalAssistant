@@ -1,0 +1,19 @@
+# Environment and secrets
+.env
+
+# Databases
+*.db
+*.db.bak-*
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Build output
+build/
+dist/
+*.egg-info/
