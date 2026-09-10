@@ -1,0 +1,51 @@
+# FastAPI & Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+
+# Database
+sqlalchemy[asyncio]>=2.0.35
+aiosqlite>=0.20.0
+asyncpg>=0.29.0
+alembic>=1.13.0
+greenlet>=3.0.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+bcrypt>=4.0.0
+
+# Settings
+# [email] extra pulls in email-validator, which pydantic's EmailStr requires at
+# import time. Without it app.schemas.auth fails to import at all.
+pydantic[email]>=2.0.0
+pydantic-settings>=2.0.0
+
+# Scheduling
+apscheduler>=3.10.4
+
+# LangChain & Agents (Phase 2+)
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-ollama>=0.2.0
+langgraph>=0.2.30
+
+# OCR (Phase 2)
+# paddleocr>=2.8.0
+# opencv-python>=4.10.0
+# rapidfuzz>=3.0.0
+
+# Vector Store (Phase 3)
+# langchain-chroma>=0.1.4
+# chromadb>=0.5.0
+
+# Utilities
+httpx>=0.27.0
+python-dateutil>=2.9.0
+# Windows has no system IANA timezone database, so zoneinfo cannot resolve names
+# like "Asia/Kolkata" without this. Patient dose times are timezone-local.
+tzdata>=2024.1
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+httpx>=0.27.0

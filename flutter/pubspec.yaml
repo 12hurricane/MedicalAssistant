@@ -1,0 +1,45 @@
+name: medassist
+description: "MedAssist AI — medication management client for the FastAPI backend."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # HTTP with interceptors. The auth interceptor attaches the bearer token and
+  # refreshes it on 401, which is the reason a plain http client is not enough.
+  dio: ^5.7.0
+
+  # JWTs go in the platform keystore/keychain, never in SharedPreferences.
+  flutter_secure_storage: ^9.2.2
+
+  # Declarative routing. Role-based redirect lives in one place rather than being
+  # scattered across Navigator calls.
+  go_router: ^14.6.2
+
+  # Auth/session state drives the router redirect, so it has to be observable.
+  flutter_riverpod: ^2.6.1
+
+  # Models are generated from the backend's openapi.json, not hand-invented.
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  build_runner: ^2.4.13
+  json_serializable: ^6.9.0
+
+flutter:
+  uses-material-design: true

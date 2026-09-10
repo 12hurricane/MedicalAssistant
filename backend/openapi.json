@@ -1,0 +1,3312 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MedAssist AI",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health Check",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register",
+        "description": "Register a new user.",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "description": "Login to get access and refresh tokens.",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_api_v1_auth_login_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh",
+        "description": "Refresh access token. Only accepts a refresh token, not an access token.",
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRefresh"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout-all": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout All",
+        "description": "Invalidate all active tokens for the current user.",
+        "operationId": "logout_all_api_v1_auth_logout_all_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Logout All Api V1 Auth Logout All Post"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Me",
+        "description": "Get current user.",
+        "operationId": "get_me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/users": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create a privileged user (ADMIN only)",
+        "description": "Create a CLINICIAN or an ADMIN.\n\nPATIENT is not accepted: ``AdminUserCreate.role`` is a\n:class:`~app.schemas.auth.PrivilegedRole`, so a patient account cannot be created\nhere even by an admin. Patients register themselves, which is also the path that\ncreates their profile row.\n\nThe retired DOCTOR and CAREGIVER values are not accepted either, for the same\nreason and by the same mechanism \u2014 they are absent from the enum, so they fail\nrequest validation with 422 rather than reaching this handler.",
+        "operationId": "create_user_api_v1_admin_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUserCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is authenticated but is not an ADMIN"
+          },
+          "400": {
+            "description": "Email already registered"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/patients/me": {
+      "get": {
+        "tags": [
+          "patients"
+        ],
+        "summary": "Get Current Patient",
+        "description": "Get current patient's profile.",
+        "operationId": "get_current_patient_api_v1_patients_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "patients"
+        ],
+        "summary": "Update Current Patient",
+        "description": "Update current patient's profile.",
+        "operationId": "update_current_patient_api_v1_patients_me_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/patients/me/safety": {
+      "get": {
+        "tags": [
+          "patients"
+        ],
+        "summary": "Get My Safety Assessment",
+        "description": "Get current patient's clinical safety assessment.",
+        "operationId": "get_my_safety_assessment_api_v1_patients_me_safety_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetyAssessmentResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/patients/{patient_id}/safety": {
+      "get": {
+        "tags": [
+          "patients"
+        ],
+        "summary": "Get Patient Safety Assessment",
+        "description": "Clinician or Admin: evaluate another patient's clinical safety assessment.\n\nA patient reads their own via ``GET /patients/me/safety``, which needs no role\ncheck because it resolves the profile from the caller's own user id.",
+        "operationId": "get_patient_safety_assessment_api_v1_patients__patient_id__safety_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Patient Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SafetyAssessmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/medications": {
+      "get": {
+        "tags": [
+          "medications"
+        ],
+        "summary": "List Medications",
+        "description": "List or search the medication catalogue.\n\nSearch is what prescription verification uses to resolve the free-text\nmedicine_name from OCR onto a catalogue entry (prescribed_medications.medication_id).",
+        "operationId": "list_medications_api_v1_medications_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive partial match on brand or generic name.",
+              "title": "Search"
+            },
+            "description": "Case-insensitive partial match on brand or generic name."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MedicationResponse"
+                  },
+                  "title": "Response List Medications Api V1 Medications Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "medications"
+        ],
+        "summary": "Create Medication",
+        "description": "Admin only - add to catalog.",
+        "operationId": "create_medication_api_v1_medications_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/medications/{id}": {
+      "get": {
+        "tags": [
+          "medications"
+        ],
+        "summary": "Get Medication",
+        "description": "Get medication by ID.",
+        "operationId": "get_medication_api_v1_medications__id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "medications"
+        ],
+        "summary": "Update Medication",
+        "description": "Admin only - update catalog medication.",
+        "operationId": "update_medication_api_v1_medications__id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicationUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/prescriptions": {
+      "get": {
+        "tags": [
+          "prescriptions"
+        ],
+        "summary": "List Prescriptions",
+        "description": "List patient's prescriptions.",
+        "operationId": "list_prescriptions_api_v1_prescriptions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PrescriptionResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Prescriptions Api V1 Prescriptions Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "prescriptions"
+        ],
+        "summary": "Create Prescription",
+        "description": "Create prescription manually.",
+        "operationId": "create_prescription_api_v1_prescriptions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrescriptionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrescriptionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/prescriptions/{id}": {
+      "get": {
+        "tags": [
+          "prescriptions"
+        ],
+        "summary": "Get Prescription",
+        "description": "Get prescription by ID.",
+        "operationId": "get_prescription_api_v1_prescriptions__id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrescriptionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/prescriptions/{id}/verify": {
+      "put": {
+        "tags": [
+          "prescriptions"
+        ],
+        "summary": "Verify Prescription",
+        "description": "Verify/approve prescription (Clinician/Admin only).\n\nVerification is the point at which dose times become real: an approved\nprescription generates its MedicationSchedule rows here. If any medication's\nfrequency cannot be turned into concrete times, the whole request is rejected\nwith 422 and nothing is persisted \u2014 a prescription is never left marked\nVERIFIED with no schedule behind it.",
+        "operationId": "verify_prescription_api_v1_prescriptions__id__verify_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrescriptionVerify"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrescriptionVerifyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedule/today": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "Get Today Schedule",
+        "description": "Today's doses for the signed-in patient, in chronological order.\n\n\"Today\" is the patient's local calendar day, not the server's. A dose with no\nMedicationEvent yet is reported as PENDING.\n\nOnly active schedules of currently-prescribed medications appear. A discontinued\nmedication is absent, matching what the reminder poller will and will not fire.",
+        "operationId": "get_today_schedule_api_v1_schedule_today_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayScheduleResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/adherence/log": {
+      "post": {
+        "tags": [
+          "adherence"
+        ],
+        "summary": "Log Dose",
+        "description": "Log a dose event (TAKEN, SKIPPED, SNOOZED).\n\nThe backend authoritatively derives the scheduled instant from the schedule/reminder.",
+        "operationId": "log_dose_api_v1_adherence_log_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoseLogCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DoseLogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/adherence/score": {
+      "get": {
+        "tags": [
+          "adherence"
+        ],
+        "summary": "Get Adherence Score",
+        "description": "Get comprehensive deterministic adherence metrics, streaks, patterns, and escalation flags.",
+        "operationId": "get_adherence_score_api_v1_adherence_score_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "7d",
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdherenceMetricsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/adherence/analysis": {
+      "get": {
+        "tags": [
+          "adherence"
+        ],
+        "summary": "Get Adherence Analysis",
+        "description": "Deterministic adherence analysis: patient explanation, barrier assessment and\nclinician brief, composed from the safety assessment, the adherence metrics and\nretrieved clinical evidence.\n\nThis is not AI and not an LLM \u2014 there is no model call in the pipeline. Output is\nreproducible for identical inputs. Deterministic safety invariants (risk level,\nhuman-review flag) and evidence citations are preserved exactly as the rules\nengine produced them; the composition layer cannot soften or overrule them.",
+        "operationId": "get_adherence_analysis_api_v1_adherence_analysis_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "7d",
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdherenceAnalysisResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AdherenceAnalysisResult": {
+        "properties": {
+          "patient_id": {
+            "type": "integer",
+            "title": "Patient Id"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          },
+          "safety_risk_level": {
+            "type": "string",
+            "title": "Safety Risk Level"
+          },
+          "requires_human_review": {
+            "type": "boolean",
+            "title": "Requires Human Review"
+          },
+          "recommended_action": {
+            "type": "string",
+            "title": "Recommended Action"
+          },
+          "patient_explanation": {
+            "$ref": "#/components/schemas/PatientExplanation"
+          },
+          "clinical_brief": {
+            "$ref": "#/components/schemas/ClinicalBrief"
+          },
+          "validation_passed": {
+            "type": "boolean",
+            "title": "Validation Passed",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "evaluated_at",
+          "safety_risk_level",
+          "requires_human_review",
+          "recommended_action",
+          "patient_explanation",
+          "clinical_brief"
+        ],
+        "title": "AdherenceAnalysisResult",
+        "description": "Master output contract from the Adherence Analysis Service.\n\n``validation_passed`` refers to the deterministic invariant checks in\nResponseValidator (risk level preserved, human-review flag preserved, no unsafe\ndosing advice, no untraceable citation). It is not a statement about a model."
+      },
+      "AdherenceMetricsResponse": {
+        "properties": {
+          "patient_id": {
+            "type": "integer",
+            "title": "Patient Id"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "period_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Period End"
+          },
+          "expected_doses": {
+            "type": "integer",
+            "title": "Expected Doses"
+          },
+          "total_taken": {
+            "type": "integer",
+            "title": "Total Taken"
+          },
+          "total_missed": {
+            "type": "integer",
+            "title": "Total Missed"
+          },
+          "total_skipped": {
+            "type": "integer",
+            "title": "Total Skipped"
+          },
+          "total_snoozed": {
+            "type": "integer",
+            "title": "Total Snoozed"
+          },
+          "adherence_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adherence Rate",
+            "description": "Null when there are no expected doses to divide by. A null rate means \"not measurable\", NOT zero and NOT 100%: render it as no-data (an em dash, a greyed bar) rather than substituting a number."
+          },
+          "missed_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missed Rate",
+            "description": "Null when there are no expected doses to divide by. A null rate means \"not measurable\", NOT zero and NOT 100%: render it as no-data (an em dash, a greyed bar) rather than substituting a number."
+          },
+          "skipped_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Rate",
+            "description": "Null when there are no expected doses to divide by. A null rate means \"not measurable\", NOT zero and NOT 100%: render it as no-data (an em dash, a greyed bar) rather than substituting a number."
+          },
+          "current_streak": {
+            "type": "integer",
+            "title": "Current Streak"
+          },
+          "best_streak": {
+            "type": "integer",
+            "title": "Best Streak"
+          },
+          "time_slot_breakdown": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TimeSlotBreakdown"
+            },
+            "type": "object",
+            "title": "Time Slot Breakdown"
+          },
+          "day_of_week_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DayOfWeekBreakdown"
+            },
+            "type": "array",
+            "title": "Day Of Week Breakdown"
+          },
+          "trend": {
+            "type": "string",
+            "title": "Trend"
+          },
+          "detected_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Detected Patterns"
+          },
+          "should_escalate": {
+            "type": "boolean",
+            "title": "Should Escalate"
+          },
+          "escalation_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Escalation Reasons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "period",
+          "period_start",
+          "period_end",
+          "expected_doses",
+          "total_taken",
+          "total_missed",
+          "total_skipped",
+          "total_snoozed",
+          "current_streak",
+          "best_streak",
+          "time_slot_breakdown",
+          "day_of_week_breakdown",
+          "trend",
+          "detected_patterns",
+          "should_escalate",
+          "escalation_reasons"
+        ],
+        "title": "AdherenceMetricsResponse"
+      },
+      "AdherenceSafetyAlertResponse": {
+        "properties": {
+          "adherence_rate": {
+            "type": "number",
+            "title": "Adherence Rate"
+          },
+          "consecutive_missed": {
+            "type": "integer",
+            "title": "Consecutive Missed"
+          },
+          "critical_drugs_affected": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Critical Drugs Affected"
+          },
+          "clinical_risk": {
+            "type": "string",
+            "title": "Clinical Risk"
+          },
+          "recommended_action": {
+            "type": "string",
+            "title": "Recommended Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "adherence_rate",
+          "consecutive_missed",
+          "critical_drugs_affected",
+          "clinical_risk",
+          "recommended_action"
+        ],
+        "title": "AdherenceSafetyAlertResponse"
+      },
+      "AdminUserCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password",
+            "description": "Between 8 and 128 characters. No character-class requirements."
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "$ref": "#/components/schemas/PrivilegedRole"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password",
+          "role"
+        ],
+        "title": "AdminUserCreate",
+        "description": "Privileged account creation. Reachable only by an authenticated ADMIN.\n\nThis is the only place ``role`` is writable over HTTP, and the values it accepts\nare constrained by :class:`PrivilegedRole` rather than by :class:`UserRole`."
+      },
+      "BarrierCategory": {
+        "type": "string",
+        "enum": [
+          "Forgetfulness",
+          "Schedule conflict",
+          "Medication misunderstanding",
+          "Side effects",
+          "Access / availability",
+          "Cost",
+          "Intentional non-adherence",
+          "Complexity",
+          "Clinician-directed hold",
+          "Unknown / Insufficient data"
+        ],
+        "title": "BarrierCategory"
+      },
+      "BarrierItem": {
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/BarrierCategory"
+          },
+          "status": {
+            "$ref": "#/components/schemas/EvidenceStatus"
+          },
+          "confidence": {
+            "$ref": "#/components/schemas/ConfidenceLevel"
+          },
+          "observed_pattern": {
+            "type": "string",
+            "title": "Observed Pattern"
+          },
+          "hypothesis_rationale": {
+            "type": "string",
+            "title": "Hypothesis Rationale"
+          },
+          "follow_up_question": {
+            "type": "string",
+            "title": "Follow Up Question"
+          },
+          "patient_reported_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Reported Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "status",
+          "confidence",
+          "observed_pattern",
+          "hypothesis_rationale",
+          "follow_up_question"
+        ],
+        "title": "BarrierItem",
+        "description": "Structured adherence barrier hypothesis.\n\nThe two text fields have different trust levels and must not be merged:\n\n- ``observed_pattern`` is composed by this system from its own numbers. Trusted.\n- ``patient_reported_text`` is whatever the patient typed. UNTRUSTED. It is\n  carried in its own field precisely so a downstream consumer never has to\n  string-parse it back out of trusted prose, and so a prompt builder can place\n  it inside a fenced untrusted block instead of concatenating it into\n  instructions. See ``app/llm/prompt.py``."
+      },
+      "Body_login_api_v1_auth_login_post": {
+        "properties": {
+          "grant_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^password$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Type"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "title": "Password"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": ""
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password",
+            "title": "Client Secret"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_login_api_v1_auth_login_post"
+      },
+      "ClinicalBrief": {
+        "properties": {
+          "patient_id": {
+            "type": "integer",
+            "title": "Patient Id"
+          },
+          "period": {
+            "type": "string",
+            "title": "Period"
+          },
+          "adherence_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adherence Rate"
+          },
+          "safety_risk_level": {
+            "type": "string",
+            "title": "Safety Risk Level"
+          },
+          "requires_human_review": {
+            "type": "boolean",
+            "title": "Requires Human Review"
+          },
+          "insights": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GenerativeClinicalInsights"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "period",
+          "safety_risk_level",
+          "requires_human_review"
+        ],
+        "title": "ClinicalBrief",
+        "description": "Clinician-facing adherence review and barrier brief."
+      },
+      "ConfidenceLevel": {
+        "type": "string",
+        "enum": [
+          "HIGH",
+          "MEDIUM",
+          "LOW"
+        ],
+        "title": "ConfidenceLevel"
+      },
+      "ContraindicationAlertResponse": {
+        "properties": {
+          "medication": {
+            "type": "string",
+            "title": "Medication"
+          },
+          "contraindication_type": {
+            "type": "string",
+            "title": "Contraindication Type"
+          },
+          "trigger": {
+            "type": "string",
+            "title": "Trigger"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "clinical_risk": {
+            "type": "string",
+            "title": "Clinical Risk"
+          },
+          "recommendation": {
+            "type": "string",
+            "title": "Recommendation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "medication",
+          "contraindication_type",
+          "trigger",
+          "severity",
+          "clinical_risk",
+          "recommendation"
+        ],
+        "title": "ContraindicationAlertResponse"
+      },
+      "DayOfWeekBreakdown": {
+        "properties": {
+          "day_name": {
+            "type": "string",
+            "title": "Day Name"
+          },
+          "total_expected": {
+            "type": "integer",
+            "title": "Total Expected"
+          },
+          "total_taken": {
+            "type": "integer",
+            "title": "Total Taken"
+          },
+          "adherence_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adherence Rate",
+            "description": "Null when there are no expected doses to divide by. A null rate means \"not measurable\", NOT zero and NOT 100%: render it as no-data (an em dash, a greyed bar) rather than substituting a number."
+          }
+        },
+        "type": "object",
+        "required": [
+          "day_name",
+          "total_expected",
+          "total_taken"
+        ],
+        "title": "DayOfWeekBreakdown"
+      },
+      "DoseLogCreate": {
+        "properties": {
+          "schedule_id": {
+            "type": "integer",
+            "title": "Schedule Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "TAKEN",
+              "SKIPPED",
+              "MISSED",
+              "SNOOZED"
+            ],
+            "title": "Status"
+          },
+          "reminder_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder Id"
+          },
+          "skip_reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkipReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Structured reason the patient selected from the fixed list. Trusted, closed vocabulary. Prefer this over free text: the barrier classifier treats it as OBSERVED evidence, whereas a free-text note can only be guessed at and is reported as INFERRED."
+          },
+          "skip_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Reason",
+            "description": "Optional free-text note from the patient. UNTRUSTED input: it is stored and shown to a clinician as an attributed quotation, and must never be treated as an instruction by any downstream consumer."
+          }
+        },
+        "type": "object",
+        "required": [
+          "schedule_id",
+          "status"
+        ],
+        "title": "DoseLogCreate",
+        "description": "Client request to record dose status. scheduled_at is derived authoritatively on backend."
+      },
+      "DoseLogResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "schedule_id": {
+            "type": "integer",
+            "title": "Schedule Id"
+          },
+          "patient_id": {
+            "type": "integer",
+            "title": "Patient Id"
+          },
+          "reminder_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder Id"
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "recorded_by": {
+            "type": "string",
+            "title": "Recorded By",
+            "default": "PATIENT"
+          },
+          "skip_reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Reason Code"
+          },
+          "skip_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "schedule_id",
+          "patient_id",
+          "scheduled_at",
+          "status"
+        ],
+        "title": "DoseLogResponse"
+      },
+      "DuplicateTherapyAlertResponse": {
+        "properties": {
+          "medications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Medications"
+          },
+          "drug_class": {
+            "type": "string",
+            "title": "Drug Class"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "clinical_risk": {
+            "type": "string",
+            "title": "Clinical Risk"
+          },
+          "recommendation": {
+            "type": "string",
+            "title": "Recommendation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "medications",
+          "drug_class",
+          "severity",
+          "clinical_risk",
+          "recommendation"
+        ],
+        "title": "DuplicateTherapyAlertResponse"
+      },
+      "EvidenceStatus": {
+        "type": "string",
+        "enum": [
+          "OBSERVED",
+          "INFERRED",
+          "UNKNOWN"
+        ],
+        "title": "EvidenceStatus"
+      },
+      "GenerativeClinicalInsights": {
+        "properties": {
+          "trend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trend",
+            "default": "UNKNOWN"
+          },
+          "concerning_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Concerning Patterns"
+          },
+          "possible_barriers": {
+            "items": {
+              "$ref": "#/components/schemas/BarrierItem"
+            },
+            "type": "array",
+            "title": "Possible Barriers"
+          }
+        },
+        "type": "object",
+        "title": "GenerativeClinicalInsights",
+        "description": "Narrative components synthesized by the generative model.\nThe LLM ONLY generates these fields. It does not touch safety or adherence arithmetic."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "MedicationCreate": {
+        "properties": {
+          "brand_name": {
+            "type": "string",
+            "title": "Brand Name"
+          },
+          "generic_name": {
+            "type": "string",
+            "title": "Generic Name"
+          },
+          "drug_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drug Class"
+          },
+          "dosage_form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dosage Form"
+          },
+          "standard_strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Strength"
+          },
+          "food_interaction_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Interaction Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "brand_name",
+          "generic_name"
+        ],
+        "title": "MedicationCreate"
+      },
+      "MedicationInteractionAlertResponse": {
+        "properties": {
+          "drug_a": {
+            "type": "string",
+            "title": "Drug A"
+          },
+          "drug_b": {
+            "type": "string",
+            "title": "Drug B"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "mechanism": {
+            "type": "string",
+            "title": "Mechanism"
+          },
+          "clinical_effect": {
+            "type": "string",
+            "title": "Clinical Effect"
+          },
+          "recommendation": {
+            "type": "string",
+            "title": "Recommendation"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "drug_a",
+          "drug_b",
+          "severity",
+          "mechanism",
+          "clinical_effect",
+          "recommendation",
+          "source"
+        ],
+        "title": "MedicationInteractionAlertResponse"
+      },
+      "MedicationReconciliationSummary": {
+        "properties": {
+          "unchanged": {
+            "type": "integer",
+            "title": "Unchanged"
+          },
+          "added": {
+            "type": "integer",
+            "title": "Added"
+          },
+          "reactivated": {
+            "type": "integer",
+            "title": "Reactivated"
+          },
+          "discontinued": {
+            "type": "integer",
+            "title": "Discontinued"
+          },
+          "active_total": {
+            "type": "integer",
+            "title": "Active Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unchanged",
+          "added",
+          "reactivated",
+          "discontinued",
+          "active_total"
+        ],
+        "title": "MedicationReconciliationSummary",
+        "description": "What a correction actually changed, reported back to the verifier."
+      },
+      "MedicationResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "brand_name": {
+            "type": "string",
+            "title": "Brand Name"
+          },
+          "generic_name": {
+            "type": "string",
+            "title": "Generic Name"
+          },
+          "drug_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drug Class"
+          },
+          "dosage_form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dosage Form"
+          },
+          "standard_strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Strength"
+          },
+          "food_interaction_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Interaction Notes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "brand_name",
+          "generic_name",
+          "created_at"
+        ],
+        "title": "MedicationResponse"
+      },
+      "MedicationUpdate": {
+        "properties": {
+          "brand_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Name"
+          },
+          "generic_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generic Name"
+          },
+          "drug_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drug Class"
+          },
+          "dosage_form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dosage Form"
+          },
+          "standard_strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standard Strength"
+          },
+          "food_interaction_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Food Interaction Notes"
+          }
+        },
+        "type": "object",
+        "title": "MedicationUpdate"
+      },
+      "PatientExplanation": {
+        "properties": {
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "what_the_system_found": {
+            "type": "string",
+            "title": "What The System Found"
+          },
+          "why_it_matters": {
+            "type": "string",
+            "title": "Why It Matters"
+          },
+          "what_to_do_next": {
+            "type": "string",
+            "title": "What To Do Next"
+          },
+          "when_to_contact_care_team": {
+            "type": "string",
+            "title": "When To Contact Care Team"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "what_the_system_found",
+          "why_it_matters",
+          "what_to_do_next",
+          "when_to_contact_care_team"
+        ],
+        "title": "PatientExplanation",
+        "description": "Patient-friendly, jargon-free adherence summary and guidance."
+      },
+      "PatientResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "integer",
+            "title": "User Id"
+          },
+          "emergency_contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emergency Contact"
+          },
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Birth"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "blood_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blood Group"
+          },
+          "allergies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allergies",
+            "default": []
+          },
+          "chronic_conditions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Chronic Conditions",
+            "default": []
+          },
+          "preferred_language": {
+            "type": "string",
+            "title": "Preferred Language"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "preferred_language",
+          "timezone",
+          "created_at"
+        ],
+        "title": "PatientResponse"
+      },
+      "PatientUpdate": {
+        "properties": {
+          "emergency_contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emergency Contact"
+          },
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Birth"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "blood_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blood Group"
+          },
+          "allergies": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allergies"
+          },
+          "chronic_conditions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chronic Conditions"
+          },
+          "preferred_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preferred Language"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          }
+        },
+        "type": "object",
+        "title": "PatientUpdate"
+      },
+      "PrescribedMedicationCreate": {
+        "properties": {
+          "medicine_name": {
+            "type": "string",
+            "title": "Medicine Name"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          },
+          "dose": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose"
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "medicine_name",
+          "frequency"
+        ],
+        "title": "PrescribedMedicationCreate"
+      },
+      "PrescribedMedicationResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "prescription_id": {
+            "type": "integer",
+            "title": "Prescription Id"
+          },
+          "patient_id": {
+            "type": "integer",
+            "title": "Patient Id"
+          },
+          "medicine_name": {
+            "type": "string",
+            "title": "Medicine Name"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          },
+          "dose": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose"
+          },
+          "frequency": {
+            "type": "string",
+            "title": "Frequency"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "medication_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medication Id"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "prescription_id",
+          "patient_id",
+          "medicine_name",
+          "frequency",
+          "is_active"
+        ],
+        "title": "PrescribedMedicationResponse"
+      },
+      "PrescriptionCreate": {
+        "properties": {
+          "doctor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doctor Name"
+          },
+          "clinic_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinic Name"
+          },
+          "prescription_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Prescription Date"
+          },
+          "medications": {
+            "items": {
+              "$ref": "#/components/schemas/PrescribedMedicationCreate"
+            },
+            "type": "array",
+            "title": "Medications"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prescription_date",
+          "medications"
+        ],
+        "title": "PrescriptionCreate"
+      },
+      "PrescriptionResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "integer",
+            "title": "Patient Id"
+          },
+          "doctor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doctor Name"
+          },
+          "clinic_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinic Name"
+          },
+          "prescription_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Prescription Date"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "verified_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified By"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "medications": {
+            "items": {
+              "$ref": "#/components/schemas/PrescribedMedicationResponse"
+            },
+            "type": "array",
+            "title": "Medications",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "prescription_date",
+          "verification_status",
+          "created_at"
+        ],
+        "title": "PrescriptionResponse"
+      },
+      "PrescriptionVerify": {
+        "properties": {
+          "verified": {
+            "type": "boolean",
+            "title": "Verified"
+          },
+          "corrections": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PrescribedMedicationCreate"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrections"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verified"
+        ],
+        "title": "PrescriptionVerify"
+      },
+      "PrescriptionVerifyResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "integer",
+            "title": "Patient Id"
+          },
+          "doctor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doctor Name"
+          },
+          "clinic_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinic Name"
+          },
+          "prescription_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Prescription Date"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "verified_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified By"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "medications": {
+            "items": {
+              "$ref": "#/components/schemas/PrescribedMedicationResponse"
+            },
+            "type": "array",
+            "title": "Medications",
+            "default": []
+          },
+          "scheduling": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ScheduleGenerationSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reconciliation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MedicationReconciliationSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "prescription_date",
+          "verification_status",
+          "created_at"
+        ],
+        "title": "PrescriptionVerifyResponse",
+        "description": "Verify response: the prescription plus scheduling and correction summaries.\n\nThe scheduling summary matters because \"verified\" alone hides useful facts \u2014\nnotably that an as-needed medication was deliberately given no dose times, so\nthe clinician is not left wondering why no reminders appeared for it. Null\nwhen the prescription was rejected.\n\nThe reconciliation summary makes a correction's effect visible: how many\nlines were kept, added, brought back, and discontinued. Null when the request\ncarried no corrections."
+      },
+      "PrivilegedRole": {
+        "type": "string",
+        "enum": [
+          "CLINICIAN",
+          "ADMIN"
+        ],
+        "title": "PrivilegedRole",
+        "description": "The roles only an existing ADMIN may hand out.\n\nA separate enum from :class:`UserRole` rather than a validator over it, so that\nPATIENT is not merely rejected by ``POST /admin/users`` \u2014 it is not expressible\nin that request at all. Patients are created by self-service registration, which\nis the one path that also builds their profile row.\n\nBecause this enum is the request contract, an unsupported role here is a 422 from\nPydantic before any handler runs. That is what makes the retired DOCTOR and\nCAREGIVER values unwritable rather than merely unused."
+      },
+      "SafetyAssessmentResponse": {
+        "properties": {
+          "patient_id": {
+            "type": "integer",
+            "title": "Patient Id"
+          },
+          "evaluated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Evaluated At"
+          },
+          "risk_level": {
+            "type": "string",
+            "title": "Risk Level"
+          },
+          "requires_human_review": {
+            "type": "boolean",
+            "title": "Requires Human Review"
+          },
+          "recommended_action": {
+            "type": "string",
+            "title": "Recommended Action"
+          },
+          "medication_interactions": {
+            "items": {
+              "$ref": "#/components/schemas/MedicationInteractionAlertResponse"
+            },
+            "type": "array",
+            "title": "Medication Interactions",
+            "default": []
+          },
+          "contraindications": {
+            "items": {
+              "$ref": "#/components/schemas/ContraindicationAlertResponse"
+            },
+            "type": "array",
+            "title": "Contraindications",
+            "default": []
+          },
+          "duplicate_therapies": {
+            "items": {
+              "$ref": "#/components/schemas/DuplicateTherapyAlertResponse"
+            },
+            "type": "array",
+            "title": "Duplicate Therapies",
+            "default": []
+          },
+          "adherence_risks": {
+            "items": {
+              "$ref": "#/components/schemas/AdherenceSafetyAlertResponse"
+            },
+            "type": "array",
+            "title": "Adherence Risks",
+            "default": []
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/SafetyEvidenceResponse"
+            },
+            "type": "array",
+            "title": "Evidence",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "evaluated_at",
+          "risk_level",
+          "requires_human_review",
+          "recommended_action"
+        ],
+        "title": "SafetyAssessmentResponse"
+      },
+      "SafetyEvidenceResponse": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "finding": {
+            "type": "string",
+            "title": "Finding"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "reference_source": {
+            "type": "string",
+            "title": "Reference Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "finding",
+          "severity",
+          "reference_source"
+        ],
+        "title": "SafetyEvidenceResponse"
+      },
+      "ScheduleGenerationSummary": {
+        "properties": {
+          "created": {
+            "type": "integer",
+            "title": "Created"
+          },
+          "reactivated": {
+            "type": "integer",
+            "title": "Reactivated"
+          },
+          "deactivated": {
+            "type": "integer",
+            "title": "Deactivated"
+          },
+          "unchanged": {
+            "type": "integer",
+            "title": "Unchanged"
+          },
+          "active_total": {
+            "type": "integer",
+            "title": "Active Total"
+          },
+          "as_needed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "As Needed",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "created",
+          "reactivated",
+          "deactivated",
+          "unchanged",
+          "active_total"
+        ],
+        "title": "ScheduleGenerationSummary",
+        "description": "What schedule generation actually did, reported back to the verifier."
+      },
+      "SkipReasonCode": {
+        "type": "string",
+        "enum": [
+          "CLINICIAN_INSTRUCTED",
+          "SIDE_EFFECTS",
+          "UNAVAILABLE",
+          "COST",
+          "SCHEDULE_CONFLICT",
+          "OTHER"
+        ],
+        "title": "SkipReasonCode",
+        "description": "Closed vocabulary for *why* a dose was skipped, chosen by the patient from a\nfixed list in the UI rather than typed.\n\nThis exists so the barrier classifier stops guessing. Keyword-matching free text\n(\"stomach\" -> side effects) is a heuristic that is wrong in both directions, and\nits output is presented to a clinician as OBSERVED evidence. A tapped option is\nthe patient's actual answer.\n\nIt is also the trust boundary. A value here is one of these constants or the\nwrite is rejected, so it is safe to render into any downstream context. The\nfree-text ``skip_reason`` beside it is arbitrary patient input and is not."
+      },
+      "TimeSlotBreakdown": {
+        "properties": {
+          "total_expected": {
+            "type": "integer",
+            "title": "Total Expected"
+          },
+          "total_taken": {
+            "type": "integer",
+            "title": "Total Taken"
+          },
+          "total_missed": {
+            "type": "integer",
+            "title": "Total Missed"
+          },
+          "total_skipped": {
+            "type": "integer",
+            "title": "Total Skipped"
+          },
+          "adherence_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adherence Rate",
+            "description": "Null when there are no expected doses to divide by. A null rate means \"not measurable\", NOT zero and NOT 100%: render it as no-data (an em dash, a greyed bar) rather than substituting a number."
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_expected",
+          "total_taken",
+          "total_missed",
+          "total_skipped"
+        ],
+        "title": "TimeSlotBreakdown"
+      },
+      "TodayDoseResponse": {
+        "properties": {
+          "schedule_id": {
+            "type": "integer",
+            "title": "Schedule Id",
+            "description": "Post this back to /adherence/log to record the dose. The backend re-derives the scheduled instant from it and never trusts a client-supplied timestamp."
+          },
+          "event_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id",
+            "description": "The MedicationEvent row, if one exists yet. Null means nothing has happened to this dose \u2014 not that data is missing."
+          },
+          "reminder_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder Id",
+            "description": "The reminder for this exact slot, if one has been created. Pass it through when logging so the reminder is acknowledged rather than left to expire as MISSED."
+          },
+          "medicine_name": {
+            "type": "string",
+            "title": "Medicine Name"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          },
+          "dose": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instructions"
+          },
+          "relation_to_meal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation To Meal",
+            "description": "BEFORE_MEAL / AFTER_MEAL / WITH_MEAL / EMPTY_STOMACH, or null."
+          },
+          "scheduled_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled At",
+            "description": "Authoritative UTC instant for this dose."
+          },
+          "scheduled_local_time": {
+            "type": "string",
+            "title": "Scheduled Local Time",
+            "description": "24-hour HH:MM wall-clock time in the patient's timezone, for display."
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "description": "PENDING / TAKEN / SKIPPED / MISSED / SNOOZED. PENDING = not yet logged."
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "skip_reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Reason Code",
+            "description": "Trusted closed-vocabulary reason the patient selected. Safe to render anywhere."
+          },
+          "skip_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Reason",
+            "description": "UNTRUSTED free text the patient typed. Display it as an attributed quotation only. Never concatenate it into an instruction, a prompt, or any string a machine will interpret."
+          },
+          "is_due": {
+            "type": "boolean",
+            "title": "Is Due",
+            "description": "True once the scheduled instant has passed. A dose later in the day is not actionable yet."
+          }
+        },
+        "type": "object",
+        "required": [
+          "schedule_id",
+          "medicine_name",
+          "scheduled_at",
+          "scheduled_local_time",
+          "status",
+          "is_due"
+        ],
+        "title": "TodayDoseResponse",
+        "description": "One scheduled dose on the patient's local calendar day today."
+      },
+      "TodayScheduleResponse": {
+        "properties": {
+          "patient_id": {
+            "type": "integer",
+            "title": "Patient Id"
+          },
+          "local_date": {
+            "type": "string",
+            "title": "Local Date",
+            "description": "The patient's local calendar date the list was built for (YYYY-MM-DD)."
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "doses": {
+            "items": {
+              "$ref": "#/components/schemas/TodayDoseResponse"
+            },
+            "type": "array",
+            "title": "Doses"
+          },
+          "total_doses": {
+            "type": "integer",
+            "title": "Total Doses"
+          },
+          "doses_taken": {
+            "type": "integer",
+            "title": "Doses Taken"
+          },
+          "doses_remaining": {
+            "type": "integer",
+            "title": "Doses Remaining",
+            "description": "Doses not yet logged, whether or not their time has passed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "local_date",
+          "timezone",
+          "doses",
+          "total_doses",
+          "doses_taken",
+          "doses_remaining"
+        ],
+        "title": "TodayScheduleResponse",
+        "description": "The patient's full dose list for today, chronological."
+      },
+      "TokenRefresh": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "TokenRefresh"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token"
+        ],
+        "title": "TokenResponse"
+      },
+      "UserRegister": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Password",
+            "description": "Between 8 and 128 characters. No character-class requirements."
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "password"
+        ],
+        "title": "UserRegister",
+        "description": "Public self-service registration. Creates a PATIENT, and can create nothing else.\n\nThere is deliberately no ``role`` field. It was removed rather than validated,\nbecause the two are not equivalent: a rejected-if-not-PATIENT check still\npublishes ``role`` in the OpenAPI schema, still advertises the enum of roles that\nexist, and still leaves one edit away from being writable again. An absent field\ncannot be smuggled through, cannot be forgotten in a refactor, and does not tell\nan anonymous caller that ADMIN is a thing this system has.\n\nPrivileged accounts are created by ``POST /admin/users``, which requires an\nauthenticated ADMIN. See :class:`AdminUserCreate`."
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "role",
+          "is_active",
+          "created_at"
+        ],
+        "title": "UserResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/v1/auth/login"
+          }
+        }
+      }
+    }
+  }
+}
