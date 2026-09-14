@@ -93,176 +93,195 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: const Text('Create account'),
-          leading: IconButton(
-            onPressed: () => context.go(AppRoutes.login),
-            icon: const Icon(Icons.arrow_back),
-            tooltip: 'Back to sign in',
-          ),
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        shape: const Border(
+          bottom: BorderSide(color: AppColors.border, width: 1.0),
         ),
-        body: Center(
+        title: const Text('Create account', style: AppTypography.titleMedium),
+        leading: IconButton(
+          onPressed: () => context.go(AppRoutes.login),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          tooltip: 'Back to sign in',
+        ),
+      ),
+      body: AuthBackground(
+        child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: GlassCard(
                 child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (_formError != null)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFDECEC),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: AppColors.statusMissed),
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_formError != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.dangerSurface,
+                            borderRadius: BorderRadius.circular(4.0),
+                            border: Border.all(color: AppColors.danger, width: 1.0),
+                          ),
+                          child: Text(
+                            _formError!,
+                            style: AppTypography.bodyMedium.copyWith(color: AppColors.danger),
+                          ),
                         ),
-                        child: Text(_formError!, style: AppTypography.bodyMedium),
-                      ),
-                    TextFormField(
-                      controller: _name,
-                      decoration: InputDecoration(
-                        labelText: 'Full name',
-                        errorText: _fieldErrors['name'],
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                      textInputAction: TextInputAction.next,
-                      enabled: !_submitting,
-                      validator: (value) => (value?.trim() ?? '').isEmpty
-                          ? 'Enter your name'
-                          : _fieldErrors['name'],
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _email,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        errorText: _fieldErrors['email'],
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      enabled: !_submitting,
-                      validator: (value) {
-                        final text = value?.trim() ?? '';
-                        if (text.isEmpty) return 'Enter your email address';
-                        if (!text.contains('@')) return 'That does not look like an email';
-                        return _fieldErrors['email'];
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _phone,
-                      decoration: InputDecoration(
-                        labelText: 'Mobile Phone (optional)',
-                        errorText: _fieldErrors['phone'],
-                      ),
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.next,
-                      enabled: !_submitting,
-                      validator: (_) => _fieldErrors['phone'],
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _password,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        errorText: _fieldErrors['password'],
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
-                          tooltip: _obscure ? 'Show password' : 'Hide password',
+                      TextFormField(
+                        controller: _name,
+                        decoration: InputDecoration(
+                          labelText: 'Full name',
+                          errorText: _fieldErrors['name'],
                         ),
+                        textCapitalization: TextCapitalization.words,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_submitting,
+                        validator: (value) => (value?.trim() ?? '').isEmpty
+                            ? 'Enter your name'
+                            : _fieldErrors['name'],
                       ),
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.next,
-                      enabled: !_submitting,
-                      onChanged: _updateStrength,
-                      validator: (value) {
-                        final text = value ?? '';
-                        if (text.isEmpty) return 'Choose a password';
-                        if (text.length < 8) return 'Use at least 8 characters';
-                        return _fieldErrors['password'];
-                      },
-                    ),
-                    if (_password.text.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: LinearProgressIndicator(
-                                value: _strengthScore,
-                                backgroundColor: AppColors.border,
-                                color: _strengthScore < 0.5
-                                    ? AppColors.danger
-                                    : _strengthScore < 1.0
-                                        ? AppColors.riskModerate
-                                        : AppColors.riskLow,
-                                minHeight: 4,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 40,
-                              child: Text(
-                                _strengthScore < 0.5
-                                    ? 'Weak'
-                                    : _strengthScore < 1.0
-                                        ? 'Fair'
-                                        : 'Strong',
-                                style: AppTypography.labelSmall,
-                              ),
-                            ),
-                          ],
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _email,
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          errorText: _fieldErrors['email'],
                         ),
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_submitting,
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          if (text.isEmpty) return 'Enter your email address';
+                          if (!text.contains('@')) return 'That does not look like an email';
+                          return _fieldErrors['email'];
+                        },
                       ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _confirmPassword,
-                      decoration: const InputDecoration(
-                        labelText: 'Confirm Password',
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _phone,
+                        decoration: InputDecoration(
+                          labelText: 'Mobile Phone (optional)',
+                          errorText: _fieldErrors['phone'],
+                        ),
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_submitting,
+                        validator: (_) => _fieldErrors['phone'],
                       ),
-                      obscureText: _obscure,
-                      textInputAction: TextInputAction.done,
-                      enabled: !_submitting,
-                      onFieldSubmitted: (_) => _submitting ? null : _submit(),
-                      validator: (value) {
-                        if (value != _password.text) return 'Passwords do not match';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _submitting ? null : _submit,
-                      child: _submitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: AppColors.textOnPrimary,
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _password,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          errorText: _fieldErrors['password'],
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => _obscure = !_obscure),
+                            icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                            tooltip: _obscure ? 'Show password' : 'Hide password',
+                          ),
+                        ),
+                        obscureText: _obscure,
+                        textInputAction: TextInputAction.next,
+                        enabled: !_submitting,
+                        onChanged: _updateStrength,
+                        validator: (value) {
+                          final text = value ?? '';
+                          if (text.isEmpty) return 'Choose a password';
+                          if (text.length < 8) return 'Use at least 8 characters';
+                          return _fieldErrors['password'];
+                        },
+                      ),
+                      if (_password.text.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: LinearProgressIndicator(
+                                  value: _strengthScore,
+                                  backgroundColor: AppColors.border,
+                                  color: _strengthScore < 0.5
+                                      ? AppColors.danger
+                                      : _strengthScore < 1.0
+                                          ? AppColors.riskModerate
+                                          : AppColors.riskLow,
+                                  minHeight: 4,
+                                ),
                               ),
-                            )
-                          : const Text('Create account'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed:
-                          _submitting ? null : () => context.go(AppRoutes.login),
-                      child: const Text('I already have an account'),
-                    ),
-                  ],
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                width: 40,
+                                child: Text(
+                                  _strengthScore < 0.5
+                                      ? 'Weak'
+                                      : _strengthScore < 1.0
+                                          ? 'Fair'
+                                          : 'Strong',
+                                  style: AppTypography.labelSmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _confirmPassword,
+                        decoration: const InputDecoration(
+                          labelText: 'Confirm Password',
+                        ),
+                        obscureText: _obscure,
+                        textInputAction: TextInputAction.done,
+                        enabled: !_submitting,
+                        onFieldSubmitted: (_) => _submitting ? null : _submit(),
+                        validator: (value) {
+                          if (value != _password.text) return 'Passwords do not match';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.textOnPrimary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4.0),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: _submitting ? null : _submit,
+                        child: _submitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: AppColors.textOnPrimary,
+                                ),
+                              )
+                            : const Text('Create account', style: AppTypography.labelLarge),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                        ),
+                        onPressed:
+                            _submitting ? null : () => context.go(AppRoutes.login),
+                        child: const Text('I already have an account'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
               ),
             ),
           ),

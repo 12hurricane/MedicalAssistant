@@ -64,6 +64,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final notice = authState is AuthSignedOut ? authState.notice : null;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: AuthBackground(
         child: Center(
           child: SingleChildScrollView(
@@ -72,98 +73,101 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 420),
               child: GlassCard(
                 child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Icon(
-                      Icons.medication_outlined,
-                      size: 48,
-                      color: AppColors.primary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Sign in',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.headlineMedium,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'MedAssist medication management',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.bodyMedium,
-                    ),
-                    const SizedBox(height: 28),
-                    if (notice != null) _Banner(notice, tone: _BannerTone.notice),
-                    if (_formError != null) _Banner(_formError!, tone: _BannerTone.error),
-                    TextFormField(
-                      controller: _email,
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      textInputAction: TextInputAction.next,
-                      enabled: !_submitting,
-                      validator: (value) {
-                        final text = value?.trim() ?? '';
-                        if (text.isEmpty) return 'Enter your email address';
-                        // Deliberately loose. The backend is the authority on what it
-                        // accepts; a strict client regex would reject valid addresses.
-                        if (!text.contains('@')) return 'That does not look like an email';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _password,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
-                          tooltip: _obscure ? 'Show password' : 'Hide password',
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Icon(
+                        Icons.medication_outlined,
+                        size: 48,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Sign in',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.headlineMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'MedAssist medication management',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyMedium,
+                      ),
+                      const SizedBox(height: 28),
+                      if (notice != null) _Banner(notice, tone: _BannerTone.notice),
+                      if (_formError != null) _Banner(_formError!, tone: _BannerTone.error),
+                      TextFormField(
+                        controller: _email,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
+                        textInputAction: TextInputAction.next,
+                        enabled: !_submitting,
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          if (text.isEmpty) return 'Enter your email address';
+                          if (!text.contains('@')) return 'That does not look like an email';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _password,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => _obscure = !_obscure),
+                            icon: Icon(_obscure ? Icons.visibility : Icons.visibility_off),
+                            tooltip: _obscure ? 'Show password' : 'Hide password',
+                          ),
                         ),
+                        obscureText: _obscure,
+                        autofillHints: const [AutofillHints.password],
+                        textInputAction: TextInputAction.done,
+                        enabled: !_submitting,
+                        onFieldSubmitted: (_) => _submitting ? null : _submit(),
+                        validator: (value) =>
+                            (value ?? '').isEmpty ? 'Enter your password' : null,
                       ),
-                      obscureText: _obscure,
-                      autofillHints: const [AutofillHints.password],
-                      textInputAction: TextInputAction.done,
-                      enabled: !_submitting,
-                      onFieldSubmitted: (_) => _submitting ? null : _submit(),
-                      validator: (value) =>
-                          (value ?? '').isEmpty ? 'Enter your password' : null,
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: _submitting ? null : () {}, // Placeholder
-                        child: const Text('Forgot password?'),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.textOnPrimary,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(4.0),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: _submitting ? null : _submit,
+                        child: _submitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: AppColors.textOnPrimary,
+                                ),
+                              )
+                            : const Text('Sign in', style: AppTypography.labelLarge),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: _submitting ? null : _submit,
-                      child: _submitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: AppColors.textOnPrimary,
-                              ),
-                            )
-                          : const Text('Sign in'),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: _submitting
-                          ? null
-                          : () => context.go(AppRoutes.register),
-                      child: const Text('Create an account'),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                        ),
+                        onPressed: _submitting
+                            ? null
+                            : () => context.go(AppRoutes.register),
+                        child: const Text('Create an account'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-              ),
           ),
         ),
       ),
@@ -186,10 +190,11 @@ class _Banner extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isError ? const Color(0xFFFDECEC) : AppColors.primaryLight,
-        borderRadius: BorderRadius.circular(10),
+        color: isError ? AppColors.dangerSurface : AppColors.primaryLight,
+        borderRadius: BorderRadius.circular(4.0),
         border: Border.all(
-          color: isError ? AppColors.statusMissed : AppColors.primary,
+          color: isError ? AppColors.danger : AppColors.primary,
+          width: 1.0,
         ),
       ),
       child: Row(
@@ -198,7 +203,7 @@ class _Banner extends StatelessWidget {
           Icon(
             isError ? Icons.error_outline : Icons.info_outline,
             size: 20,
-            color: isError ? AppColors.statusMissed : AppColors.primaryDark,
+            color: isError ? AppColors.danger : AppColors.primaryDark,
           ),
           const SizedBox(width: 10),
           Expanded(

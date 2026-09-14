@@ -1,6 +1,11 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import '../app/theme/app_colors.dart';
+
+/// Clinical surface card.
+///
+/// Replaces legacy glassmorphic backdrop filters and shadows with a flat,
+/// high-contrast clinical card adhering strictly to audit-ready UI standards.
 class GlassCard extends StatelessWidget {
   const GlassCard({
     super.key,
@@ -13,30 +18,17 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.8),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 32,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: child,
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(4.0),
+        border: Border.all(
+          color: AppColors.border,
+          width: 1.0,
         ),
       ),
+      child: child,
     );
   }
 }
