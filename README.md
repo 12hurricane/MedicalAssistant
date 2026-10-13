@@ -1,136 +1,135 @@
 # MedAssist AI — Medication Management System
 
-Helps patients understand verified prescriptions, manage medication schedules, and
-surfaces adherence problems for human clinical follow-up.
+[![CI Pipeline](https://github.com/12hurricane/MedicalAssistant/actions/workflows/ci.yml/badge.svg)](https://github.com/12hurricane/MedicalAssistant/actions/workflows/ci.yml)
 
-## What actually exists today
+MedAssist AI is an intelligent, safety-first clinical medication adherence and management platform. It assists patients in understanding verified prescriptions, managing real-time medication schedules, and surfacing adherence barriers for authoritative human clinical review.
 
-The system is deterministic end to end. **There is no model call anywhere in this
-codebase** — no LLM, no agents, no orchestration graph, no embeddings. Everything below
-is reproducible: identical inputs produce identical output.
+---
 
-| Layer | Status |
-|---|---|
-| Auth (JWT), registration, role separation | built |
-| Prescription capture, correction and verification | built |
-| Schedule calculation, reminders, dose logging | built (timezone-local, DST tested) |
-| Safety rules engine — contraindications, interactions, duplicate therapy | built |
-| Clinical evidence retrieval (BM25 + TF-IDF cosine over a fixed corpus) | built |
-| Adherence metrics, streaks, time-of-day and day-of-week patterns, escalation | built |
-| Adherence Analysis Service — the Constrained Adherence Intelligence Layer | built |
-| Prompt trust contract for a future generative layer (`app/analysis/prompts.py`) | built, unused |
-| Generative layer (LLM), multi-agent orchestration, OCR, vector store | **not built** |
+## Architecture & System Invariants
 
-### The Adherence Analysis Service is not AI
+The platform maintains strict separation between **authoritative deterministic clinical logic** and **generative patient assistance**:
 
-`app/analysis/` composes patient explanations and clinician briefs like this:
+1. **Deterministic Clinical Engine (Zero-LLM):** Prescription validation, dosage allocation, drug-drug interaction detection, adherence score calculation, and clinician overrides are 100% deterministic and reproducible.
+2. **4-Tier Resilient LLM Router:** Patient conversational chat routes through ultra-low-latency Groq LPU (`qwen/qwen3.8-27b`), falling back gracefully to HuggingFace Inference API, Google Gemini 2.5 Flash, and local Ollama (`qwen2.5:7b-instruct`) for complete offline air-gapped resilience.
+3. **Strict Safety Boundary:** Patient free text is treated as untrusted input. Adversarial attempts to override clinical recommendations or fabricate quotations are filtered and discarded before clinician escalation.
+4. **Immutable Audit Trail:** All clinician overrides and corrections are logged to `event_corrections` with clinical justification and timestamps.
 
-```
-SafetyAssessment + AdherenceMetrics + RAG Evidence
-        ↓
-Deterministic template/composition logic
-        ↓
-Barrier classification → Response validator → Structured output
-```
+| Layer | Component | Status |
+|---|---|---|
+| **Auth & RBAC** | JWT authentication, role separation (Patient / Clinician) | ✅ Built & Verified |
+| **Prescriptions** | Capture, verification, and deterministic daily slot generation | ✅ Built & Verified |
+| **Safety Engine** | Contraindications, interactions, duplicate therapy rules | ✅ Built & Verified |
+| **Evidence Retrieval** | BM25 + TF-IDF cosine ranking over clinical drug corpus | ✅ Built & Verified |
+| **Adherence Metrics** | Rolling compliance score, streaks, and risk classification | ✅ Built & Verified |
+| **4-Tier LLM Router** | Groq LPU → HF Router → Gemini 2.5 Flash → Ollama | ✅ Built & Verified |
+| **Adherence Boundary** | Untrusted text fencing, quote grounding, risk locking | ✅ Built & Verified |
+| **Frontend Client** | Flutter Web SPA (Patient Chat & Clinician Dashboard) | ✅ Built & Verified |
+| **CI/CD Pipeline** | GitHub Actions 3-job parallel quality gates & tests | ✅ Built & Verified |
+| **Production Packaging** | Multi-stage Docker Compose with Nginx reverse proxy | ✅ Built & Verified |
 
-It cannot hallucinate because it cannot generate. Calling it an agent or an LLM would
-be false, so nothing in the code, the docstrings, the OpenAPI descriptions or this file
-does. The generative phase is a later box in the build order.
+---
 
-### Trust tiers are explicit and must stay that way
+## Quick Start (Docker Compose)
 
-Clinician-facing output keeps three sources visibly separate:
+The entire production stack (Nginx + compiled Flutter Web + FastAPI backend + SQLite/Postgres) can be launched with Docker:
 
-```
-🚫 DETERMINISTIC SAFETY FINDING   — rules engine, authoritative
-📄 VERIFIED CLINICAL EVIDENCE     — retrieved, cited
-✦  AI-ASSISTED SUMMARY            — not present yet; will be clearly labelled
-```
-
-Patient free text (`MedicationEvent.skip_reason`) is **untrusted data**. It is quoted to
-the clinician in `BarrierItem.patient_reported_text` and never merged into
-system-authored prose. `app/analysis/prompts.py` defines the four-tier prompt contract a
-future model must be fed through — untrusted content last, fenced, passed as structured
-JSON, with the deterministic verdict re-applied after generation regardless.
-
-Structured skip reasons (`MedicationEvent.skip_reason_code`) are a closed vocabulary the
-patient selects from, so they are trusted: `OBSERVED` / `HIGH` confidence. Keyword
-matching on free text is a guess and is labelled one: `INFERRED` / `LOW`.
-
-## Tech stack
-
-- **Backend**: FastAPI, SQLAlchemy 2 (async), Alembic, APScheduler
-- **Database**: SQLite in development (`sqlite+aiosqlite`), PostgreSQL supported via `asyncpg`
-- **Frontend**: Flutter (in progress)
-- **Planned**: LangGraph + Ollama for the generative layer. The packages are in
-  `requirements.txt`, but nothing imports them yet.
-
-## Quick Start
-
-### Prerequisites
-- Python 3.11+
-- Flutter 3.24+ (frontend only)
-- Docker & Docker Compose (only needed for PostgreSQL; SQLite needs nothing)
-
-### 1. Setup backend
 ```bash
-cd backend && python -m venv venv && venv/Scripts/python -m pip install -r requirements.txt
+# 1. Clone the repository
+git clone https://github.com/12hurricane/MedicalAssistant.git
+cd MedicalAssistant
+
+# 2. Provision local environment
+cp backend/.env.production.example backend/.env
+
+# 3. Launch the containerized application
+docker compose up -d --build
+
+# 4. Access the web applications
+# Frontend: http://localhost/
+# Patient Chat: http://localhost/#/patient/chat
+# Clinician Portal: http://localhost/#/clinician
+# Backend API Docs: http://localhost:8000/docs
 ```
 
-### 2. Configure
-Create `backend/.env`:
-```
-DATABASE_URL="sqlite+aiosqlite:///./medication.db"
-SECRET_KEY="change-this-for-local-development-only"
-```
-`SECRET_KEY` above is acceptable **only** for local development. Generate a proper
-random secret before deployment.
+---
 
-### 3. Run migrations
+## Local Development Setup
+
+### 1. Backend Setup (FastAPI)
 ```bash
-cd backend && venv/Scripts/python -m alembic upgrade head
+cd backend
+python -m venv venv
+# Windows:
+.\venv\Scripts\activate
+# Linux/macOS:
+source venv/bin/activate
+
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
 ```
 
-### 4. Start the backend
+### 2. Frontend Setup (Flutter Web)
 ```bash
-cd backend && venv/Scripts/python -m uvicorn app.main:app --reload --port 8000
+cd flutter
+flutter pub get
+flutter run -d chrome --web-port 3000
 ```
 
-### 5. Run the tests
+---
+
+## Automated Verification Suite
+
+Run the full automated test suite locally:
+
 ```bash
-cd backend && venv/Scripts/python -m pytest -q
-```
-Tests run against an isolated database. `medication.db` holds real data kept for manual
-verification; `conftest.py` fails any test that opens it.
+cd backend
 
-## API Documentation
-With the backend running: http://localhost:8000/docs
+# 1. Unit & Boundary Safety Tests (27 tests)
+pytest test_llm_router.py test_agent_endpoint.py test_merge_boundary.py -v
+
+# 2. End-to-End Adherence Lifecycle Verification (8 stages)
+python test_e2e_adherence_lifecycle.py
+```
+
+---
 
 ## Project Structure
+
 ```
+├── .github/workflows/
+│   └── ci.yml               # Parallel CI/CD pipeline (Backend, Flutter, Docker)
 ├── backend/
 │   ├── app/
-│   │   ├── analysis/     # Adherence Analysis Service (deterministic, not an LLM)
-│   │   ├── api/          # REST endpoints (v1)
-│   │   ├── core/         # Config, security
-│   │   ├── models/       # SQLAlchemy ORM models
-│   │   ├── notifications/
-│   │   ├── rag/          # Clinical evidence corpus, index, retriever
-│   │   ├── rules/        # Safety rules engine
-│   │   ├── schemas/      # Pydantic DTOs
-│   │   ├── services/     # Business logic
-│   │   ├── agents/       # EMPTY — reserved for the future generative layer
-│   │   └── graph/        # EMPTY — reserved for future orchestration
-│   ├── alembic/          # Migrations
-│   └── test_*.py         # Test suite (pytest, at the backend root)
-├── flutter/              # Flutter app
-└── docker-compose.yml
+│   │   ├── agents/          # LLM router (Groq, HF, Gemini, Ollama)
+│   │   ├── analysis/        # Constrained Adherence Intelligence & prompts
+│   │   ├── api/             # FastAPI REST routes (v1)
+│   │   ├── core/            # Configuration, security, database session
+│   │   ├── models/          # SQLAlchemy ORM models
+│   │   ├── rag/             # Clinical evidence retrieval corpus
+│   │   ├── rules/           # Deterministic safety rules engine
+│   │   └── schemas/         # Pydantic data schemas
+│   ├── alembic/             # Database migrations
+│   ├── Dockerfile           # Backend container specification
+│   ├── requirements.txt     # Python dependencies
+│   └── test_*.py            # Comprehensive test suite
+├── flutter/
+│   ├── lib/                 # Flutter UI screens, providers, and models
+│   ├── Dockerfile           # Multi-stage Flutter build & Nginx container
+│   └── pubspec.yaml         # Flutter dependencies
+├── nginx/
+│   └── nginx.conf           # Reverse proxy configuration
+└── docker-compose.yml       # Production container orchestration
 ```
 
-## Demo Day Checklist
-- [ ] Run `docker-compose build` the night before (never the morning of)
-- [ ] Run `docker-compose up -d` on demo day
-- [ ] Check `docker-compose logs seed-job` exits 0
-- [ ] Open localhost:8080, log in, confirm escalation visible
-- [ ] Have BUG_REPORT.md open on a second tab
-- [ ] Have the architecture diagram ready to show
+---
+
+## Demo Day Walkthrough
+
+1. **Patient Fast-Path Interaction (`/#/patient/chat`):**
+   - Inquire: *"I missed my morning Metformin dose. Should I double up tonight?"*
+   - Verify: Latency under ~2 seconds with clear warning against double-dosing.
+2. **Clinician Human-in-the-Loop Override (`/#/clinician`):**
+   - Inspect Patient adherence record and trigger a dose correction.
+   - Confirm adherence recalculation and immutable audit trail persistence.
