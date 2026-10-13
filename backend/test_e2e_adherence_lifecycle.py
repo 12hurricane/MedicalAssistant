@@ -34,40 +34,74 @@ def ensure_seed_data():
     """Bootstraps required clinician and patient records if not already in database."""
     import sqlite3
     from datetime import datetime, timezone
+    from app.core.security import get_password_hash
     
-    r_c = requests.post(f"{BASE_URL}/auth/login", data={"username": "clinician.test@example.com", "password": "Password123!"})
-    r_p = requests.post(f"{BASE_URL}/auth/login", data={"username": "flutter_walkthrough@example.com", "password": "FlutterWalk2026!"})
-    if r_c.status_code == 200 and r_p.status_code == 200:
-        return
+    # 1. Set timeouts on the seed-data login requests
+    try:
+        r_c = requests.post(
+            f"{BASE_URL}/auth/login",
+            data={"username": "clinician.test@example.com", "password": "Password123!"},
+            timeout=5.0,
+        )
+        r_p = requests.post(
+            f"{BASE_URL}/auth/login",
+            data={"username": "flutter_walkthrough@example.com", "password": "FlutterWalk2026!"},
+            timeout=5.0,
+        )
+        if r_c.status_code == 200 and r_p.status_code == 200:
+            return
+    except requests.RequestException:
+        pass
 
-    from app.services.auth_service import auth_service
-    c_hash = auth_service.get_password_hash("Password123!")
-    p_hash = auth_service.get_password_hash("FlutterWalk2026!")
+    # 2. Call the imported hash function directly
+    c_hash = get_password_hash("Password123!")
+    p_hash = get_password_hash("FlutterWalk2026!")
     now = datetime.now(timezone.utc).isoformat()
     
     conn = sqlite3.connect("medication.db")
     cur = conn.cursor()
+
+    # 3. Repair existing clinician account when login fails, or insert if absent
     cur.execute("SELECT id FROM users WHERE email = 'clinician.test@example.com'")
-    if not cur.fetchone():
+    c_row = cur.fetchone()
+    if c_row:
+        cur.execute(
+            "UPDATE users SET hashed_password = ?, role = 'CLINICIAN', is_active = 1, updated_at = ? WHERE id = ?",
+            (c_hash, now, c_row[0]),
+        )
+    else:
         cur.execute(
             "INSERT INTO users (name, email, hashed_password, role, is_active, token_version, created_at, updated_at) "
             "VALUES (?, ?, ?, 'CLINICIAN', 1, 1, ?, ?)",
-            ("Dr. Test Clinician", "clinician.test@example.com", c_hash, now, now)
+            ("Dr. Test Clinician", "clinician.test@example.com", c_hash, now, now),
         )
+
+    # 4. Repair existing patient account when login fails, or insert if absent
     cur.execute("SELECT id FROM users WHERE email = 'flutter_walkthrough@example.com'")
-    row = cur.fetchone()
-    if not row:
+    p_row = cur.fetchone()
+    if p_row:
+        patient_user_id = p_row[0]
+        cur.execute(
+            "UPDATE users SET hashed_password = ?, role = 'PATIENT', is_active = 1, updated_at = ? WHERE id = ?",
+            (p_hash, now, patient_user_id),
+        )
+    else:
         cur.execute(
             "INSERT INTO users (name, email, hashed_password, role, is_active, token_version, created_at, updated_at) "
             "VALUES (?, ?, ?, 'PATIENT', 1, 1, ?, ?)",
-            ("Flutter Walkthrough Patient", "flutter_walkthrough@example.com", p_hash, now, now)
+            ("Flutter Walkthrough Patient", "flutter_walkthrough@example.com", p_hash, now, now),
         )
-        user_id = cur.lastrowid
+        patient_user_id = cur.lastrowid
+
+    # 5. Create the patient profile independently of the patient user
+    cur.execute("SELECT id FROM patients WHERE user_id = ?", (patient_user_id,))
+    if not cur.fetchone():
         cur.execute(
             "INSERT INTO patients (user_id, timezone, created_at, updated_at) "
             "VALUES (?, 'Asia/Kolkata', ?, ?)",
-            (user_id, now, now)
+            (patient_user_id, now, now),
         )
+
     conn.commit()
     conn.close()
 
