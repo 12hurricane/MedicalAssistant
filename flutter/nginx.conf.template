@@ -1,0 +1,56 @@
+server {
+    listen $PORT;
+    server_name localhost;
+
+    # Root directory for Flutter Web release bundle
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Gzip compression for performance
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_types
+        text/plain
+        text/css
+        text/javascript
+        application/javascript
+        application/json
+        application/wasm
+        image/svg+xml;
+
+    # Security Headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Reverse proxy for backend API calls
+    # BACKEND_URL is injected at container startup by the entrypoint script.
+    # On Railway this is set to the internal private network URL of the backend
+    # service (e.g. http://backend.railway.internal:8000).
+    location /api/v1/ {
+        proxy_pass ${BACKEND_URL}/api/v1/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 90s;
+        proxy_connect_timeout 90s;
+    }
+
+    # Cache static assets
+    location ~* \.(?:ico|css|js|gif|jpe?g|png|wasm|woff2?|eot|ttf|svg)$ {
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800, immutable";
+    }
+
+    # HTML5 client-side routing fallback (for Flutter Web SPA)
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

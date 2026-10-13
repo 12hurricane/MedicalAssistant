@@ -32,5 +32,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Start production ASGI server with multi-worker concurrency and proxy headers
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips=*"]
+# Start production ASGI server — Railway injects $PORT at runtime
+# alembic upgrade head runs first to apply any pending schema migrations
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2 --proxy-headers --forwarded-allow-ips=*"]

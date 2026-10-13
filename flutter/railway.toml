@@ -1,0 +1,12 @@
+# MedAssist AI — Railway Deployment Configuration
+# Frontend service: Flutter Web SPA served by Nginx
+# https://docs.railway.app/reference/config-as-code
+
+[build]
+dockerfile = "flutter/Dockerfile"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
