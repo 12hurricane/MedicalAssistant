@@ -11,30 +11,36 @@ RUN flutter pub get
 COPY . .
 RUN flutter build web --release
 
-# Stage 2: Minimal hardened Nginx runtime
+# Stage 2: Minimal hardened unprivileged Nginx runtime
 FROM nginx:1.25-alpine
 
 # envsubst is included in the gettext package (not installed by default in alpine)
 RUN apk add --no-cache gettext
 
+# Configure permissions and paths for unprivileged nginx execution (UID 101)
+RUN sed -i 's|/var/run/nginx.pid|/tmp/nginx.pid|g' /etc/nginx/nginx.conf && \
+    mkdir -p /var/cache/nginx /var/log/nginx /usr/share/nginx/html /etc/nginx/conf.d && \
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx /usr/share/nginx/html
+
 # Remove default configuration
-RUN rm /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/conf.d/default.conf
 
 # Install template (env vars substituted at startup) and entrypoint
-COPY nginx.conf.template /etc/nginx/conf.d/default.conf.template
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY --chown=nginx:nginx nginx.conf.template /etc/nginx/conf.d/default.conf.template
+COPY --chown=nginx:nginx docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Copy compiled Flutter web release bundle
-COPY --from=builder /app/build/web /usr/share/nginx/html
+# Copy compiled Flutter web release bundle from builder stage
+COPY --from=builder --chown=nginx:nginx /app/build/web /usr/share/nginx/html
 
-# Railway injects $PORT — expose 80 as a safe default for local Docker
-EXPOSE 80
+# Run master process as non-root user
+USER nginx
 
-# HEALTHCHECK reads $PORT so it matches the port nginx is actually bound to.
-# PORT is injected by Railway; falls back to 80 for local Docker usage.
+# Unprivileged port binding
+EXPOSE 8080
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q -O /dev/null http://localhost:${PORT:-80}/ || exit 1
+    CMD wget -q -O /dev/null http://127.0.0.1:${PORT:-8080}/ || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
