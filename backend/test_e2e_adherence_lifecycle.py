@@ -94,17 +94,42 @@ def ensure_seed_data():
         patient_user_id = cur.lastrowid
 
     # 5. Create or repair the patient profile independently of the patient user
-    cur.execute("SELECT id, preferred_language FROM patients WHERE user_id = ?", (patient_user_id,))
+    cur.execute("SELECT id, preferred_language, allergies, chronic_conditions FROM patients WHERE user_id = ?", (patient_user_id,))
     patient_row = cur.fetchone()
     if patient_row:
+        p_id = patient_row[0]
+        updates = []
         if patient_row[1] is None:
-            cur.execute("UPDATE patients SET preferred_language = 'en', updated_at = ? WHERE id = ?", (now, patient_row[0]))
+            updates.append("preferred_language = 'en'")
+        if patient_row[2] is None:
+            updates.append("allergies = '[]'")
+        if patient_row[3] is None:
+            updates.append("chronic_conditions = '[]'")
+        if updates:
+            cur.execute(f"UPDATE patients SET {', '.join(updates)}, updated_at = ? WHERE id = ?", (now, p_id))
     else:
         cur.execute(
-            "INSERT INTO patients (user_id, timezone, preferred_language, created_at, updated_at) "
-            "VALUES (?, 'Asia/Kolkata', 'en', ?, ?)",
+            "INSERT INTO patients (user_id, timezone, preferred_language, allergies, chronic_conditions, created_at, updated_at) "
+            "VALUES (?, 'Asia/Kolkata', 'en', '[]', '[]', ?, ?)",
             (patient_user_id, now, now),
         )
+        p_id = cur.lastrowid
+
+    # 6. Ensure Clinician is assigned to the Patient
+    cur.execute("SELECT id FROM users WHERE email = 'clinician.test@example.com'")
+    clinician_row = cur.fetchone()
+    if clinician_row:
+        c_id = clinician_row[0]
+        cur.execute(
+            "SELECT id FROM clinician_patient_assignments WHERE clinician_id = ? AND patient_id = ?",
+            (c_id, p_id),
+        )
+        if not cur.fetchone():
+            cur.execute(
+                "INSERT INTO clinician_patient_assignments (clinician_id, patient_id, assigned_at, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (c_id, p_id, now, now, now),
+            )
 
     conn.commit()
     conn.close()
@@ -134,10 +159,8 @@ patient_headers = {"Authorization": f"Bearer {patient_token}"}
 
 # Get current patient profile
 me_resp = requests.get(f"{BASE_URL}/patients/me", headers=patient_headers)
-if me_resp.status_code == 200:
-    patient_id = me_resp.json().get("id", 5)
-else:
-    patient_id = 5
+assert_status(me_resp, 200, "Get Current Patient Profile")
+patient_id = me_resp.json()["id"]
 
 print(f"    Authenticated Clinician: clinician.test@example.com")
 print(f"    Authenticated Patient: ID {patient_id} (flutter_walkthrough@example.com)")
@@ -203,7 +226,7 @@ schedule_resp = requests.get(
 )
 if schedule_resp.status_code == 404:
     schedule_resp = requests.get(
-        f"{BASE_URL}/schedules/today?patient_id={patient_id}",
+        f"{BASE_URL}/schedule/today",
         headers=patient_headers
     )
 assert_status(schedule_resp, 200, "Fetch Daily Schedule Slots")

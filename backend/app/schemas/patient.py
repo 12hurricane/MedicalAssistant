@@ -69,3 +69,10 @@ class PatientResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("allergies", "chronic_conditions", mode="before")
+    @classmethod
+    def _coerce_none_to_list(cls, v):
+        if v is None:
+            return []
+        return v

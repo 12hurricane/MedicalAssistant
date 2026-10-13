@@ -50,8 +50,8 @@ jobs:
           # Apply database schema migrations
           alembic upgrade head
 
-          # Start FastAPI server in background
-          uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          # Start FastAPI server in background with logging
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
           
           # Wait for server /health endpoint to become responsive
           echo "Waiting for backend service to report healthy..."
@@ -63,8 +63,8 @@ jobs:
             sleep 1
           done
 
-          # Execute E2E Lifecycle Script
-          python test_e2e_adherence_lifecycle.py
+          # Execute E2E Lifecycle Script and dump server.log on failure
+          python test_e2e_adherence_lifecycle.py || { echo "==== SERVER LOG ON FAILURE ===="; tail -n 200 server.log; exit 1; }
 
   # ---------------------------------------------------------------------------
   # 2. Docker & Packaging Verification
