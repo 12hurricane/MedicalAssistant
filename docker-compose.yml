@@ -12,14 +12,7 @@ services:
     # up-to-date when the server accepts its first request.  A failed migration
     # prevents the container from reaching "healthy", which in turn blocks the
     # frontend (depends_on: service_healthy) from starting.
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn app.main:app
-               --host 0.0.0.0
-               --port 8000
-               --workers 2
-               --proxy-headers
-               --forwarded-allow-ips=*"
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips=*"
     ports:
       - "8000:8000"
     volumes:
@@ -46,7 +39,7 @@ services:
   frontend:
     build:
       context: ./flutter
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.local
     container_name: medassist_frontend
     restart: unless-stopped
     ports:
@@ -55,7 +48,7 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
       interval: 20s
       timeout: 5s
       retries: 3

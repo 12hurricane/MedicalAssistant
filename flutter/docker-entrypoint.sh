@@ -8,8 +8,8 @@
 
 set -e
 
-PORT="${PORT:-80}"
-BACKEND_URL="${BACKEND_URL:-http://backend:8000}"
+export PORT="${PORT:-80}"
+export BACKEND_URL="${BACKEND_URL:-http://backend:8000}"
 
 # Substitute PORT and BACKEND_URL into the nginx template
 # Substitute ONLY our two env vars into the nginx template.

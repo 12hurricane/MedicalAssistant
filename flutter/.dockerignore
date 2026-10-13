@@ -1,0 +1,12 @@
+.dart_tool/
+build/**
+!build/web/
+!build/web/**
+android/
+ios/
+linux/
+macos/
+windows/
+.git/
+.gitignore
+*.log
