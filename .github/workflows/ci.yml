@@ -46,6 +46,9 @@ jobs:
           GROQ_API_KEY: "mock_ci_key"
           HF_TOKEN: "mock_ci_token"
         run: |
+          # Apply database schema migrations
+          alembic upgrade head
+
           # Start FastAPI server in background
           uvicorn app.main:app --host 127.0.0.1 --port 8000 &
           

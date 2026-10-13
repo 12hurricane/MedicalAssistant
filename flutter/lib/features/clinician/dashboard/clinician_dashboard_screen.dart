@@ -169,8 +169,8 @@ class ClinicianDashboardScreen extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        ref.refresh(adherenceAnalysisProvider(patientId).future);
-        ref.refresh(clinicianDosesProvider(patientId).future);
+        ref.invalidate(adherenceAnalysisProvider(patientId));
+        ref.invalidate(clinicianDosesProvider(patientId));
       },
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),

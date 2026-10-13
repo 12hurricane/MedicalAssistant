@@ -30,10 +30,53 @@ def assert_status(resp: requests.Response, expected_codes: list[int] | int, step
         sys.exit(1)
     print(f"[+] SUCCESS {step_name} (HTTP {resp.status_code})")
 
+def ensure_seed_data():
+    """Bootstraps required clinician and patient records if not already in database."""
+    import sqlite3
+    from datetime import datetime, timezone
+    
+    r_c = requests.post(f"{BASE_URL}/auth/login", data={"username": "clinician.test@example.com", "password": "Password123!"})
+    r_p = requests.post(f"{BASE_URL}/auth/login", data={"username": "flutter_walkthrough@example.com", "password": "FlutterWalk2026!"})
+    if r_c.status_code == 200 and r_p.status_code == 200:
+        return
+
+    from app.services.auth_service import auth_service
+    c_hash = auth_service.get_password_hash("Password123!")
+    p_hash = auth_service.get_password_hash("FlutterWalk2026!")
+    now = datetime.now(timezone.utc).isoformat()
+    
+    conn = sqlite3.connect("medication.db")
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM users WHERE email = 'clinician.test@example.com'")
+    if not cur.fetchone():
+        cur.execute(
+            "INSERT INTO users (name, email, hashed_password, role, is_active, token_version, created_at, updated_at) "
+            "VALUES (?, ?, ?, 'CLINICIAN', 1, 1, ?, ?)",
+            ("Dr. Test Clinician", "clinician.test@example.com", c_hash, now, now)
+        )
+    cur.execute("SELECT id FROM users WHERE email = 'flutter_walkthrough@example.com'")
+    row = cur.fetchone()
+    if not row:
+        cur.execute(
+            "INSERT INTO users (name, email, hashed_password, role, is_active, token_version, created_at, updated_at) "
+            "VALUES (?, ?, ?, 'PATIENT', 1, 1, ?, ?)",
+            ("Flutter Walkthrough Patient", "flutter_walkthrough@example.com", p_hash, now, now)
+        )
+        user_id = cur.lastrowid
+        cur.execute(
+            "INSERT INTO patients (user_id, timezone, created_at, updated_at) "
+            "VALUES (?, 'Asia/Kolkata', ?, ?)",
+            (user_id, now, now)
+        )
+    conn.commit()
+    conn.close()
+
 # ---------------------------------------------------------------------------
 # 1. Authentication
 # ---------------------------------------------------------------------------
 print_step("1. Authenticating Clinician & Patient Sessions")
+ensure_seed_data()
+
 
 clinician_auth = requests.post(
     f"{BASE_URL}/auth/login",
