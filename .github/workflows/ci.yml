@@ -13,6 +13,15 @@ jobs:
   backend-test:
     name: Backend Tests & Quality Gates
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "sqlite+aiosqlite:///./medication.db"
+      SECRET_KEY: "ci-testing-secret-key-do-not-use-in-production"
+      ENVIRONMENT: "development"
+      DEBUG: "false"
+      GEMINI_API_KEY: "mock_ci_key"
+      GROQ_API_KEY: "mock_ci_key"
+      HF_TOKEN: "mock_ci_token"
+      PYTHONPATH: "."
 
     steps:
       - name: Checkout Code
@@ -33,18 +42,10 @@ jobs:
       - name: Run LLM Router & Safety Boundary Tests
         working-directory: ./backend
         run: |
-          pytest test_llm_router.py test_agent_endpoint.py test_merge_boundary.py -v
+          python -m pytest test_llm_router.py test_agent_endpoint.py test_merge_boundary.py -v
 
       - name: Run E2E Adherence Lifecycle Verification
         working-directory: ./backend
-        env:
-          DATABASE_URL: "sqlite+aiosqlite:///./medication.db"
-          SECRET_KEY: "ci-testing-secret-key-do-not-use-in-production"
-          ENVIRONMENT: "development"
-          DEBUG: "false"
-          GEMINI_API_KEY: "mock_ci_key"
-          GROQ_API_KEY: "mock_ci_key"
-          HF_TOKEN: "mock_ci_token"
         run: |
           # Apply database schema migrations
           alembic upgrade head
@@ -106,7 +107,6 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.27.1'
           channel: 'stable'
           cache: true
 

@@ -61,7 +61,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   // go_router needs a Listenable, Riverpod speaks in providers. This bridges the two:
   // every auth-state change bumps the notifier, which re-runs `redirect`.
   final refresh = ValueNotifier<int>(0);
-  ref.listen<AuthState>(authControllerProvider, (_, _) => refresh.value++);
+  ref.listen<AuthState>(authControllerProvider, (previous, next) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
