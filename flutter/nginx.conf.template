@@ -55,17 +55,31 @@ server {
     # Flutter's build tool appends a hex fingerprint to chunk filenames, e.g.
     #   main.dart.js_xxx.part.js, canvaskit-*.js, flutter.js (hashed via URL param)
     # These are safe to mark immutable because the URL itself changes on rebuild.
+    #
+    # NOTE: nginx's add_header inheritance rule — any add_header in a location
+    # block replaces ALL add_header directives from the parent server block for
+    # that response.  Security headers must be repeated here explicitly.
     location ~* \.[0-9a-f]{8,}\.(js|css|woff2?|eot|ttf|svg|png|gif|jpe?g|ico|wasm)$ {
         expires 1y;
-        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     }
 
     # Do NOT mark un-hashed assets as immutable — they share the same filename
     # across deployments (index.html, flutter_service_worker.js, manifest.json,
     # favicon.ico, icons/*.png).  Use a short must-revalidate TTL instead.
+    #
+    # Security headers repeated here for the same add_header inheritance reason.
     location ~* \.(?:js|css|woff2?|eot|ttf|svg|png|gif|jpe?g|ico|wasm)$ {
         expires 1h;
-        add_header Cache-Control "public, max-age=3600, must-revalidate";
+        add_header Cache-Control "public, max-age=3600, must-revalidate" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     }
 
     # HTML5 client-side routing fallback (for Flutter Web SPA)
