@@ -14,7 +14,8 @@ services:
       - db_data:/app/data
       - ./backend/medication.db:/app/medication.db
     env_file:
-      - ./backend/.env
+      - path: ./backend/.env
+        required: false
     environment:
       - ENVIRONMENT=production
       - DEBUG=false

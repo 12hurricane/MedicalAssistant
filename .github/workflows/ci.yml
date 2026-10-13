@@ -83,6 +83,7 @@ jobs:
 
       - name: Validate Docker Compose Configuration
         run: |
+          cp backend/.env.production.example backend/.env
           docker compose config --quiet
 
       - name: Build Backend Docker Image
