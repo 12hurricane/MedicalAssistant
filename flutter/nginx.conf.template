@@ -1,10 +1,16 @@
 server {
-    listen $PORT;
+    listen ${PORT};
     server_name localhost;
 
     # Root directory for Flutter Web release bundle
     root /usr/share/nginx/html;
     index index.html;
+
+    # Use Docker's embedded DNS resolver so that the backend upstream hostname
+    # is resolved per-request rather than once at nginx startup.
+    # This prevents a "host not found in upstream" fatal error when the backend
+    # container starts after nginx.
+    resolver 127.0.0.11 valid=10s ipv6=off;
 
     # Gzip compression for performance
     gzip on;
@@ -26,12 +32,14 @@ server {
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-    # Reverse proxy for backend API calls
-    # BACKEND_URL is injected at container startup by the entrypoint script.
-    # On Railway this is set to the internal private network URL of the backend
-    # service (e.g. http://backend.railway.internal:8000).
+    # Reverse proxy for backend API calls.
+    # BACKEND_URL is injected at container startup via docker-entrypoint.sh.
+    # Assigning it to a variable forces nginx to resolve the hostname on each
+    # request (respecting the resolver above) rather than once at config load.
+    # Path: /api/v1/foo → upstream /api/v1/foo (prefix preserved, no double path).
     location /api/v1/ {
-        proxy_pass ${BACKEND_URL}/api/v1/;
+        set $backend "${BACKEND_URL}";
+        proxy_pass $backend;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -43,10 +51,21 @@ server {
         proxy_connect_timeout 90s;
     }
 
-    # Cache static assets
-    location ~* \.(?:ico|css|js|gif|jpe?g|png|wasm|woff2?|eot|ttf|svg)$ {
-        expires 7d;
-        add_header Cache-Control "public, max-age=604800, immutable";
+    # Cache content-hashed assets (JS chunks, WASM, fonts, images) aggressively.
+    # Flutter's build tool appends a hex fingerprint to chunk filenames, e.g.
+    #   main.dart.js_xxx.part.js, canvaskit-*.js, flutter.js (hashed via URL param)
+    # These are safe to mark immutable because the URL itself changes on rebuild.
+    location ~* \.[0-9a-f]{8,}\.(js|css|woff2?|eot|ttf|svg|png|gif|jpe?g|ico|wasm)$ {
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # Do NOT mark un-hashed assets as immutable — they share the same filename
+    # across deployments (index.html, flutter_service_worker.js, manifest.json,
+    # favicon.ico, icons/*.png).  Use a short must-revalidate TTL instead.
+    location ~* \.(?:js|css|woff2?|eot|ttf|svg|png|gif|jpe?g|ico|wasm)$ {
+        expires 1h;
+        add_header Cache-Control "public, max-age=3600, must-revalidate";
     }
 
     # HTML5 client-side routing fallback (for Flutter Web SPA)

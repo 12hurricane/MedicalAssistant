@@ -12,6 +12,10 @@ PORT="${PORT:-80}"
 BACKEND_URL="${BACKEND_URL:-http://backend:8000}"
 
 # Substitute PORT and BACKEND_URL into the nginx template
+# Substitute ONLY our two env vars into the nginx template.
+# Passing the explicit list prevents envsubst from expanding nginx's own
+# $-variables ($host, $uri, $http_upgrade, $remote_addr, etc.) which would
+# silently break the proxy and SPA routing.
 envsubst '${PORT} ${BACKEND_URL}' \
   < /etc/nginx/conf.d/default.conf.template \
   > /etc/nginx/conf.d/default.conf

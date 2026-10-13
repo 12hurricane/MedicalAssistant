@@ -31,8 +31,10 @@ COPY --from=builder /app/build/web /usr/share/nginx/html
 # Railway injects $PORT — expose 80 as a safe default for local Docker
 EXPOSE 80
 
+# HEALTHCHECK reads $PORT so it matches the port nginx is actually bound to.
+# PORT is injected by Railway; falls back to 80 for local Docker usage.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget -q -O /dev/null http://localhost/ || exit 1
+    CMD wget -q -O /dev/null http://localhost:${PORT:-80}/ || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
