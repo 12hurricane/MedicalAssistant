@@ -15,6 +15,9 @@ from app.models.adherence_report import AdherenceReport
 from app.models.reminder import Reminder, ReminderStatus
 from app.models.follow_up_task import FollowUpTask
 from app.models.consent import ConsentRecord
+from app.models.medication_event_correction import MedicationEventCorrection
+from app.models.schedule_version import ScheduleVersion
+from app.models.clinician_patient_assignment import ClinicianPatientAssignment
 
 __all__ = [
     "Base",
@@ -36,5 +39,7 @@ __all__ = [
     "ReminderStatus",
     "FollowUpTask",
     "ConsentRecord",
+    "MedicationEventCorrection",
+    "ScheduleVersion",
+    "ClinicianPatientAssignment",
 ]
-

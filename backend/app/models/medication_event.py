@@ -1,6 +1,6 @@
 import enum
 from datetime import datetime
-from sqlalchemy import ForeignKey, String, Index, UniqueConstraint
+from sqlalchemy import ForeignKey, String, Index, UniqueConstraint, text, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 from app.models.types import UTCDateTime
@@ -77,6 +77,8 @@ class MedicationEvent(TimestampMixin, Base):
     # instruction context; it belongs inside a delimited untrusted block. See
     # app/llm/prompt.py.
     skip_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    clinician_confirmed: Mapped[bool] = mapped_column(default=False, server_default=false(), nullable=False)
+    verifying_clinician_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     snooze_until: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     # Relationships

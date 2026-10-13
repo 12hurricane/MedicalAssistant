@@ -27,6 +27,7 @@ class AuthService:
             password=user_data.password,
             phone=user_data.phone,
             role=UserRole.PATIENT.value,
+            timezone=user_data.timezone,
         )
 
     @staticmethod
@@ -61,6 +62,7 @@ class AuthService:
         password: str,
         phone: str | None,
         role: str,
+        timezone: str | None = None,
     ) -> User:
         """
         Create the user and, for patients, their patient profile in ONE transaction.
@@ -104,7 +106,9 @@ class AuthService:
         # PATIENT is the only role with a profile table today; CLINICIAN and ADMIN have
         # none, so there is deliberately nothing to create for them.
         if db_user.role == UserRole.PATIENT.value:
-            db_user.patient = Patient()
+            db_user.patient = Patient(
+                timezone=timezone if timezone else 'UTC'
+            )
 
         db.add(db_user)
         try:

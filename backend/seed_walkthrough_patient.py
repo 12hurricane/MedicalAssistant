@@ -24,7 +24,8 @@ import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
 
-BASE = "http://127.0.0.1:8000/api/v1"
+import os
+BASE = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000/api/v1")
 DB = "medication.db"
 
 EMAIL = "flutter_walkthrough@example.com"

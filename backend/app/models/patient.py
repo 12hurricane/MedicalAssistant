@@ -26,11 +26,19 @@ class Patient(TimestampMixin, Base):
 
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="patient")
-    prescriptions: Mapped[List["Prescription"]] = relationship("Prescription", back_populates="patient")
-    medication_events: Mapped[List["MedicationEvent"]] = relationship("MedicationEvent", back_populates="patient")
-    consents: Mapped[List["ConsentRecord"]] = relationship("ConsentRecord", back_populates="patient")
-    prescribed_medications: Mapped[List["PrescribedMedication"]] = relationship("PrescribedMedication", back_populates="patient")
-    schedules: Mapped[List["MedicationSchedule"]] = relationship("MedicationSchedule", back_populates="patient")
-    adherence_reports: Mapped[List["AdherenceReport"]] = relationship("AdherenceReport", back_populates="patient")
-    reminders: Mapped[List["Reminder"]] = relationship("Reminder", back_populates="patient")
-    follow_up_tasks: Mapped[List["FollowUpTask"]] = relationship("FollowUpTask", back_populates="patient")
+    prescriptions: Mapped[List["Prescription"]] = relationship("Prescription", back_populates="patient", cascade="all, delete-orphan")
+    medication_events: Mapped[List["MedicationEvent"]] = relationship("MedicationEvent", back_populates="patient", cascade="all, delete-orphan")
+    consents: Mapped[List["ConsentRecord"]] = relationship("ConsentRecord", back_populates="patient", cascade="all, delete-orphan")
+    prescribed_medications: Mapped[List["PrescribedMedication"]] = relationship("PrescribedMedication", back_populates="patient", cascade="all, delete-orphan")
+    schedules: Mapped[List["MedicationSchedule"]] = relationship("MedicationSchedule", back_populates="patient", cascade="all, delete-orphan")
+    adherence_reports: Mapped[List["AdherenceReport"]] = relationship("AdherenceReport", back_populates="patient", cascade="all, delete-orphan")
+    reminders: Mapped[List["Reminder"]] = relationship("Reminder", back_populates="patient", cascade="all, delete-orphan")
+    follow_up_tasks: Mapped[List["FollowUpTask"]] = relationship("FollowUpTask", back_populates="patient", cascade="all, delete-orphan")
+
+    @property
+    def name(self) -> str | None:
+        return self.user.name if "user" in self.__dict__ and self.user else None
+
+    @property
+    def email(self) -> str | None:
+        return self.user.email if "user" in self.__dict__ and self.user else None

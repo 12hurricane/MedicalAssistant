@@ -1,43 +1,100 @@
-version: '3.8'
-
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
-    container_name: medassist_db
-    environment:
-      POSTGRES_USER: medassist
-      POSTGRES_PASSWORD: medassist_dev_2024
-      POSTGRES_DB: medassist
+  # ---------------------------------------------------------------------------
+  # FastAPI Production Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medassist_backend
+    restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "8000:8000"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - db_data:/app/data
+      - ./backend/medication.db:/app/medication.db
+    env_file:
+      - ./backend/.env
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U medassist"]
-      interval: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+      start_period: 10s
+    networks:
+      - medassist_net
 
-  # Ollama - Local LLM Server
+  # ---------------------------------------------------------------------------
+  # Nginx Reverse Proxy + Flutter Web SPA Static Assets
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./flutter
+      dockerfile: Dockerfile
+    container_name: medassist_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - medassist_net
+
+  # ---------------------------------------------------------------------------
+  # Optional: Seed Job for Clinical Walkthrough Demo
+  # ---------------------------------------------------------------------------
+  seed-job:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medassist_seed
+    profiles:
+      - demo
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./backend/medication.db:/app/medication.db
+    environment:
+      - API_BASE_URL=http://backend:8000/api/v1
+    command: >
+      sh -c "python seed_walkthrough_patient.py --reset || (echo 'SEED JOB FAILED' && exit 1)"
+    restart: "no"
+    networks:
+      - medassist_net
+
+  # ---------------------------------------------------------------------------
+  # Optional: Local Ollama (Zero-Internet Safety Fallback)
+  # ---------------------------------------------------------------------------
   ollama:
     image: ollama/ollama:latest
     container_name: medassist_ollama
+    profiles:
+      - offline
+    restart: unless-stopped
     ports:
       - "11434:11434"
     volumes:
-      - ollama_data:/root/.ollama
-    # Uncomment for GPU support (NVIDIA):
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
-    restart: unless-stopped
+      - ollama_cache:/root/.ollama
+    networks:
+      - medassist_net
 
 volumes:
-  postgres_data:
-  ollama_data:
+  db_data:
+    driver: local
+  ollama_cache:
+    driver: local
+
+networks:
+  medassist_net:
+    driver: bridge

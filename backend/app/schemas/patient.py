@@ -64,6 +64,8 @@ class PatientResponse(BaseModel):
     # Exposed so a client can tell which zone its dose times are being
     # interpreted in. Without it the value was unreadable as well as unsettable.
     timezone: str
+    name: Optional[str] = None
+    email: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

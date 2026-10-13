@@ -1,18 +1,16 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../auth/state/auth_controller.dart';
+import '../adherence/adherence_analytics_screen.dart';
 import '../prescriptions/prescriptions_screen.dart';
 import '../profile/profile_screen.dart';
 import 'patient_dashboard_screen.dart';
 
 /// Shell widget that provides bottom navigation for the patient portal.
-///
-/// This wraps the existing [PatientDashboardScreen] content alongside
-/// Prescriptions and Profile tabs without touching `router.dart`.
 class PatientShellScreen extends ConsumerStatefulWidget {
   const PatientShellScreen({super.key});
 
@@ -23,14 +21,13 @@ class PatientShellScreen extends ConsumerStatefulWidget {
 class _PatientShellScreenState extends ConsumerState<PatientShellScreen> {
   int _currentIndex = 0;
 
-  static const _titles = ['Today', 'Prescriptions', 'Profile'];
+  static const _titles = ['Today\'s Doses', 'Prescriptions', 'Adherence Analytics', 'Profile'];
 
   @override
   Widget build(BuildContext context) {
     final session = ref.watch(currentSessionProvider);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: Column(
           mainAxisSize: MainAxisSize.min,
@@ -41,7 +38,7 @@ class _PatientShellScreenState extends ConsumerState<PatientShellScreen> {
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
-                fontSize: 19,
+                fontSize: 18,
               ),
             ),
             if (_currentIndex == 0 && session != null)
@@ -55,65 +52,61 @@ class _PatientShellScreenState extends ConsumerState<PatientShellScreen> {
               ),
           ],
         ),
-        backgroundColor: AppColors.surface.withValues(alpha: 0.6),
+        backgroundColor: AppColors.surface,
         elevation: 0,
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(color: Colors.transparent),
-          ),
-        ),
+        shape: const Border(bottom: BorderSide(color: AppColors.border, width: 1)),
         actions: [
-          if (_currentIndex != 2) // Profile tab has its own sign-out
+          if (_currentIndex != 3) // Profile tab has its own sign-out
             IconButton(
               onPressed: () =>
                   ref.read(authControllerProvider.notifier).logout(),
               icon: const Icon(Icons.logout_rounded,
-                  color: AppColors.textPrimary),
+                  color: AppColors.textSecondary),
               tooltip: 'Sign out',
             ),
         ],
       ),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFEBF4FA),
-              Color(0xFFF7F9FB),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        color: AppColors.background,
         child: IndexedStack(
           index: _currentIndex,
           children: const [
             _DashboardContent(),
             PrescriptionsScreen(),
+            AdherenceAnalyticsScreen(),
             ProfileScreen(),
           ],
         ),
       ),
+      floatingActionButton: _currentIndex == 0 // Only show on dashboard
+          ? FloatingActionButton(
+              onPressed: () => context.go(AppRoutes.patientAgentChat),
+              backgroundColor: AppColors.primary,
+              tooltip: 'Chat with MedAssist AI',
+              child: const Icon(Icons.smart_toy_rounded, color: Colors.white),
+            )
+          : _currentIndex == 1 // Prescriptions
+              ? FloatingActionButton.extended(
+                  onPressed: () => context.go(AppRoutes.patientUpload),
+                  backgroundColor: AppColors.primary,
+                  icon: const Icon(Icons.document_scanner, color: Colors.white),
+                  label: const Text('Upload Rx', style: TextStyle(color: Colors.white)),
+                )
+              : null,
       bottomNavigationBar: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.surface,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.textPrimary.withValues(alpha: 0.06),
-              blurRadius: 12,
-              offset: const Offset(0, -2),
-            ),
-          ],
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavItem(
-                  icon: Icons.home_rounded,
-                  label: 'Home',
+                  icon: Icons.calendar_today_rounded,
+                  label: 'Today',
                   isActive: _currentIndex == 0,
                   onTap: () => setState(() => _currentIndex = 0),
                 ),
@@ -124,10 +117,16 @@ class _PatientShellScreenState extends ConsumerState<PatientShellScreen> {
                   onTap: () => setState(() => _currentIndex = 1),
                 ),
                 _NavItem(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
+                  icon: Icons.insights_rounded,
+                  label: 'Analytics',
                   isActive: _currentIndex == 2,
                   onTap: () => setState(() => _currentIndex = 2),
+                ),
+                _NavItem(
+                  icon: Icons.person_rounded,
+                  label: 'Profile',
+                  isActive: _currentIndex == 3,
+                  onTap: () => setState(() => _currentIndex = 3),
                 ),
               ],
             ),
@@ -144,15 +143,11 @@ class _PatientShellScreenState extends ConsumerState<PatientShellScreen> {
   }
 }
 
-/// The dashboard content extracted from PatientDashboardScreen,
-/// without its own Scaffold/AppBar (since PatientShellScreen provides those).
 class _DashboardContent extends ConsumerWidget {
   const _DashboardContent();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Re-use the existing dashboard's body by importing it.
-    // We wrap it in SafeArea since the shell handles the AppBar.
     return const SafeArea(child: PatientDashboardBody());
   }
 }
@@ -175,21 +170,20 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: isActive
               ? AppColors.primary.withValues(alpha: 0.1)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              size: 22,
+              size: 20,
               color: isActive ? AppColors.primary : AppColors.textDisabled,
             ),
             const SizedBox(height: 2),

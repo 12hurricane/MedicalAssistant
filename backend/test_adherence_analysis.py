@@ -534,7 +534,7 @@ async def test_injected_text_in_metrics_cannot_change_the_verdict(critical_case,
         critical_case["bundle"],
     )
     explanation = analysis._build_patient_explanation(
-        poisoned, critical_case["safety"], classify_adherence_barriers(poisoned)
+        poisoned, critical_case["safety"], classify_adherence_barriers(poisoned), critical_case["bundle"]
     )
 
     assert any(payload in p for p in brief.insights.concerning_patterns), (

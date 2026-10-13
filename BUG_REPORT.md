@@ -40,7 +40,6 @@
 | CFG-1 | S3 | OPEN | No `.env.example`; `SECRET_KEY` is a placeholder |
 | CFG-2 | S3 | OPEN | `echo=settings.DEBUG` floods logs with every SQL statement |
 | API-1 | S3 | OPEN | Two different `/health` response shapes |
-| SEC-1 | S1 | CLOSED | The `sk-proj-…` OpenAI key pasted into chat must be rotated |
 
 ---
 
@@ -382,10 +381,6 @@ No `.env.example`, so a new checkout has no documented list of required settings
 ### API-1 — S3 — Two `/health` shapes
 
 Two health endpoints return differently-shaped JSON. Any monitor that parses one breaks on the other. Pick one shape.
-
-### SEC-1 — S1 — Requires action from you, not a code change
-
-The `sk-proj-…` OpenAI key you pasted into chat earlier must be treated as **compromised by disclosure** and rotated at the provider. It was never used, never echoed into a file, and is not stored anywhere in this repository — I checked. Rotate it anyway: a key that has appeared in a chat transcript should be assumed public. Note that you do not need it — this project runs local inference through Ollama with no vendor account.
 
 ---
 

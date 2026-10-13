@@ -89,6 +89,7 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: Password
     phone: Optional[str] = Field(default=None, max_length=50)
+    timezone: Optional[str] = Field(default=None, description="IANA timezone name, e.g. 'Asia/Kolkata'")
 
 
 class AdminUserCreate(BaseModel):

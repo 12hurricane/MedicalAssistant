@@ -176,10 +176,46 @@ Recommendation:
 If concomitant use of sertraline and tramadol is clinically warranted, careful observation of the patient is advised, particularly during treatment initiation and dose increases.
 """,
     ),
+    Document(
+        document_id="DOC-FDA-MET-02",
+        title="Glucophage (metformin hydrochloride) FDA Prescribing Information - Contrast Administration",
+        source="US Food and Drug Administration / DailyMed",
+        source_type="FDA_LABEL",
+        publication_date="2021-09-20",
+        version="Rev 09/2021",
+        content="""
+Section 5.1: Radiologic Studies with Iodinated Contrast Agents
+Intravascular administration of iodinated contrast agents in patients treated with metformin has led to acute renal impairment and lactic acidosis. Discontinue metformin prior to or at the time of the imaging procedure in patients with eGFR between 30 and 60 mL/min/1.73m2, and withhold for 48 hours post-procedure until renal function is re-evaluated.
+""",
+    ),
+    Document(
+        document_id="DOC-FDA-LIS-01",
+        title="Prinivil (lisinopril) FDA Prescribing Information",
+        source="US Food and Drug Administration / DailyMed",
+        source_type="FDA_LABEL",
+        publication_date="2022-10-15",
+        version="Rev 10/2022",
+        content="""
+Section 7.1: Potassium Supplements and Potassium-Sparing Diuretics
+Concomitant administration of lisinopril with potassium supplements, salt substitutes containing potassium, or potassium-sparing diuretics significantly increases the risk of severe hyperkalemia. Monitor serum potassium closely in patients receiving concurrent therapy.
+""",
+    ),
+    Document(
+        document_id="DOC-FDA-WAR-02",
+        title="Coumadin (warfarin sodium) FDA Prescribing Information - Antibacterial Interactions",
+        source="US Food and Drug Administration / DailyMed",
+        source_type="FDA_LABEL",
+        publication_date="2022-08-01",
+        version="Rev 08/2022",
+        content="""
+Section 7.2: Antibacterial Agents and INR Potentiation
+Concomitant administration of oral anticoagulants with broad-spectrum antibacterials or enzyme inhibitors alters intestinal flora and impairs warfarin clearance, potentiating anticoagulation and elevating INR. Frequent INR monitoring and empirical warfarin dose reduction are recommended.
+""",
+    ),
 ]
 
 
-def build_corpus_chunks() -> List[Chunk]:
+def build_corpus_chunks(include_extended: bool = False) -> List[Chunk]:
     """Generate structured, metadata-rich chunks from the authoritative document repository."""
     chunks: List[Chunk] = []
 
@@ -365,5 +401,57 @@ def build_corpus_chunks() -> List[Chunk]:
             publication_date="2021-12-05",
         )
     )
+
+    if include_extended:
+        # 9. Metformin - Radiographic Iodinated Contrast Warning
+        chunks.append(
+            Chunk(
+                chunk_id="CHK-MET-002",
+                document_id="DOC-FDA-MET-02",
+                drug_name="metformin",
+                drug_class="biguanide",
+                topic="warnings",
+                source="US Food and Drug Administration / DailyMed",
+                section="Section 5.1: Radiologic Studies with Iodinated Contrast Agents",
+                text="Intravascular administration of iodinated contrast agents in patients treated with metformin has led to acute renal impairment and lactic acidosis. Discontinue metformin prior to or at the time of the imaging procedure in patients with eGFR between 30 and 60 mL/min/1.73m2, and withhold for 48 hours post-procedure until renal function is re-evaluated.",
+                related_drugs=(),
+                version="Rev 09/2021",
+                publication_date="2021-09-20",
+            )
+        )
+
+        # 10. Lisinopril - Potassium Supplements Interaction
+        chunks.append(
+            Chunk(
+                chunk_id="CHK-LIS-002",
+                document_id="DOC-FDA-LIS-01",
+                drug_name="lisinopril",
+                drug_class="ace_inhibitor",
+                topic="interactions",
+                source="US Food and Drug Administration / DailyMed",
+                section="Section 7.1: Potassium Supplements and Potassium-Sparing Diuretics",
+                text="Concomitant administration of lisinopril with potassium supplements, salt substitutes containing potassium, or potassium-sparing diuretics significantly increases the risk of severe hyperkalemia. Monitor serum potassium closely in patients receiving concurrent therapy.",
+                related_drugs=("spironolactone",),
+                version="Rev 10/2022",
+                publication_date="2022-10-15",
+            )
+        )
+
+        # 11. Warfarin - Antibacterial Interaction (INR Elevation)
+        chunks.append(
+            Chunk(
+                chunk_id="CHK-WAR-003",
+                document_id="DOC-FDA-WAR-02",
+                drug_name="warfarin",
+                drug_class="anticoagulant",
+                topic="interactions",
+                source="US Food and Drug Administration / DailyMed",
+                section="Section 7.2: Antibacterial Agents and INR Potentiation",
+                text="Concomitant administration of oral anticoagulants with broad-spectrum antibacterials or enzyme inhibitors alters intestinal flora and impairs warfarin clearance, potentiating anticoagulation and elevating INR. Frequent INR monitoring and empirical warfarin dose reduction are recommended.",
+                related_drugs=("amoxicillin", "amoxicillin_clavulanate"),
+                version="Rev 08/2022",
+                publication_date="2022-08-01",
+            )
+        )
 
     return chunks

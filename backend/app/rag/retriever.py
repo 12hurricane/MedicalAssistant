@@ -47,6 +47,7 @@ from typing import Dict, List, Optional, Set
 
 from app.rag.corpus import Chunk
 from app.rag.embeddings import Embedder, OllamaEmbedder, SemanticIndex
+from app.rag.vector_store import ChromaSemanticIndex
 from app.rag.indexer import (
     ClinicalCorpusIndex,
     _tokenize,
@@ -131,6 +132,42 @@ class EvidenceResult:
         return [c for c in self.evidence if c.entity_verified]
 
 
+    def to_llm_projection(self) -> dict:
+        """
+        Strict LLM-facing evidence boundary.
+        Filters out internal retrieval states, scores, and unverified chunks.
+        """
+        status = "SUFFICIENT" if self.has_sufficient_evidence else "INSUFFICIENT"
+        
+        clinical_evidence = []
+        if self.has_sufficient_evidence:
+            for c in self.citable_evidence:
+                # Extra safety boundary: explicitly ensure the chunk passed all absolute thresholds.
+                # In Phase 2, `evidence` already only contains chunks that passed the thresholds,
+                # but this check acts as a defensive programming invariant.
+                if (c.lexical_score >= SUFFICIENCY_MIN_COVERAGE
+                    and c.tfidf_cosine_score >= SUFFICIENCY_MIN_COSINE
+                    and c.non_entity_lexical_score >= NON_ENTITY_MIN_COVERAGE
+                    and c.non_entity_tfidf_cosine_score >= NON_ENTITY_MIN_COSINE):
+                    
+                    clinical_evidence.append({
+                        "medication": c.drug_name,
+                        "evidence_text": c.text,
+                        "source": c.source,
+                        "section": c.section,
+                        "document_id": c.document_id,
+                        "version": c.version
+                    })
+
+        return {
+            "finding_id": self.finding_id,
+            "query": self.query,
+            "topic": self.topic,
+            "evidence_status": status,
+            "clinical_evidence": clinical_evidence
+        }
+
+
 @dataclass
 class FindingEvidenceBundle:
     """Consolidated evidence package for an entire Safety Assessment."""
@@ -139,6 +176,15 @@ class FindingEvidenceBundle:
     results: List[EvidenceResult] = field(default_factory=list)
     total_evidence_chunks: int = 0
     all_findings_supported: bool = False
+
+    def to_llm_projection(self) -> dict:
+        """LLM-facing projection of the entire bundle."""
+        return {
+            "patient_id": self.patient_id,
+            "assessment_risk_level": self.assessment_risk_level,
+            "all_findings_supported": self.all_findings_supported,
+            "results": [r.to_llm_projection() for r in self.results]
+        }
 
 
 # ---- Thresholds ----------------------------------------------------------------
@@ -294,8 +340,10 @@ class HybridEvidenceRetriever:
         # unreachable, so the existing suite exercising this path is exercising the
         # degraded configuration rather than a fiction. ``get_default_retriever`` supplies
         # the real embedder, so switching the dense arm on is one visible line.
-        self.semantic: Optional[SemanticIndex] = (
-            SemanticIndex(embedder, self.index.indexed_texts())
+        # Use ephemeral index for tests (StaticEmbedder), persistent for production
+        persist_dir = "./chroma_data" if getattr(embedder, "model_name", "") not in ("static", "static-embedder") else None
+        self.semantic: Optional[ChromaSemanticIndex] = (
+            ChromaSemanticIndex(embedder, self.index.indexed_texts(), persist_directory=persist_dir)
             if embedder is not None
             else None
         )
@@ -524,24 +572,23 @@ class HybridEvidenceRetriever:
         if not evidence:
             # Secondary: search within drug_b's entity boundary
             evidence = self.search(query=query, drug_filter=alert.drug_b, top_k=2)
-        if not evidence:
-            # Last resort: unfiltered. ``search`` stamps these entity_verified=False,
-            # and ``citable_evidence`` withholds them from the citation path.
-            evidence = self.search(query=query, top_k=2)
-
-        # Derived from the chunks, not tracked alongside them. A parallel flag is one
-        # forgotten assignment away from a sufficiency check that lies about its input.
-        entity_verified = bool(evidence) and all(c.entity_verified for c in evidence)
 
         # Sufficiency requires BOTH the conjunctive score thresholds AND entity verification.
-        has_sufficient = (
-            entity_verified
-            and len(evidence) > 0
-            and evidence[0].lexical_score >= SUFFICIENCY_MIN_COVERAGE
-            and evidence[0].tfidf_cosine_score >= SUFFICIENCY_MIN_COSINE
-            and evidence[0].non_entity_lexical_score >= NON_ENTITY_MIN_COVERAGE
-            and evidence[0].non_entity_tfidf_cosine_score >= NON_ENTITY_MIN_COSINE
-        )
+        sufficient_evidence = []
+        for c in evidence:
+            if (c.entity_verified
+                and c.lexical_score >= SUFFICIENCY_MIN_COVERAGE
+                and c.tfidf_cosine_score >= SUFFICIENCY_MIN_COSINE
+                and c.non_entity_lexical_score >= NON_ENTITY_MIN_COVERAGE
+                and c.non_entity_tfidf_cosine_score >= NON_ENTITY_MIN_COSINE):
+                sufficient_evidence.append(c)
+
+        has_sufficient = len(sufficient_evidence) > 0
+        if not has_sufficient:
+            evidence = []
+        else:
+            evidence = sufficient_evidence
+
         confidence = round(evidence[0].relevance_score, 2) if evidence else 0.0
 
         return EvidenceResult(
@@ -567,21 +614,22 @@ class HybridEvidenceRetriever:
         evidence = self.search(query=query, drug_filter=alert.medication, topic_filter="contraindications", top_k=2)
         if not evidence:
             evidence = self.search(query=query, drug_filter=alert.medication, top_k=2)
-        if not evidence:
-            # Unfiltered last resort. ``search`` stamps these entity_verified=False and
-            # ``citable_evidence`` withholds them, so they inform without being cited.
-            evidence = self.search(query=query, top_k=2)
 
-        entity_verified = bool(evidence) and all(c.entity_verified for c in evidence)
+        sufficient_evidence = []
+        for c in evidence:
+            if (c.entity_verified
+                and c.lexical_score >= SUFFICIENCY_MIN_COVERAGE
+                and c.tfidf_cosine_score >= SUFFICIENCY_MIN_COSINE
+                and c.non_entity_lexical_score >= NON_ENTITY_MIN_COVERAGE
+                and c.non_entity_tfidf_cosine_score >= NON_ENTITY_MIN_COSINE):
+                sufficient_evidence.append(c)
 
-        has_sufficient = (
-            entity_verified
-            and len(evidence) > 0
-            and evidence[0].lexical_score >= SUFFICIENCY_MIN_COVERAGE
-            and evidence[0].tfidf_cosine_score >= SUFFICIENCY_MIN_COSINE
-            and evidence[0].non_entity_lexical_score >= NON_ENTITY_MIN_COVERAGE
-            and evidence[0].non_entity_tfidf_cosine_score >= NON_ENTITY_MIN_COSINE
-        )
+        has_sufficient = len(sufficient_evidence) > 0
+        if not has_sufficient:
+            evidence = []
+        else:
+            evidence = sufficient_evidence
+
         confidence = round(evidence[0].relevance_score, 2) if evidence else 0.0
 
         return EvidenceResult(
@@ -619,17 +667,22 @@ class HybridEvidenceRetriever:
 
         # If no entity-verified evidence, do NOT fall back to unfiltered search.
         # "No adherence guidance in corpus for this drug" is the truthful answer.
-        entity_verified = bool(evidence) and all(c.entity_verified for c in evidence)
-
         # Require conjunctive score thresholds and entity verification — not just len(evidence) > 0.
-        has_sufficient = (
-            entity_verified
-            and len(evidence) > 0
-            and evidence[0].lexical_score >= SUFFICIENCY_MIN_COVERAGE
-            and evidence[0].tfidf_cosine_score >= SUFFICIENCY_MIN_COSINE
-            and evidence[0].non_entity_lexical_score >= NON_ENTITY_MIN_COVERAGE
-            and evidence[0].non_entity_tfidf_cosine_score >= NON_ENTITY_MIN_COSINE
-        )
+        sufficient_evidence = []
+        for c in evidence:
+            if (c.entity_verified
+                and c.lexical_score >= SUFFICIENCY_MIN_COVERAGE
+                and c.tfidf_cosine_score >= SUFFICIENCY_MIN_COSINE
+                and c.non_entity_lexical_score >= NON_ENTITY_MIN_COVERAGE
+                and c.non_entity_tfidf_cosine_score >= NON_ENTITY_MIN_COSINE):
+                sufficient_evidence.append(c)
+
+        has_sufficient = len(sufficient_evidence) > 0
+        if not has_sufficient:
+            evidence = []
+        else:
+            evidence = sufficient_evidence
+
         confidence = round(evidence[0].relevance_score, 2) if evidence else 0.0
 
         return EvidenceResult(

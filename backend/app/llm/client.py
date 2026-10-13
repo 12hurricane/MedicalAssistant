@@ -1,170 +1,179 @@
-"""Ollama transport.
+"""LLM Router with Generative Fallback Architecture.
 
-A thin async client over Ollama's HTTP API on loopback. No API key, no vendor account,
-no per-token cost, and no patient data leaving the host — which is the reason this is
-local rather than a hosted endpoint, cost being the lesser argument.
-
-Deliberately not LangChain, despite ``langchain-ollama`` sitting in requirements.txt
-unimported. This needs two calls — "is the daemon there" and "generate" — and a direct
-httpx client makes the timeout, the context size and the thinking-token handling below
-visible at the call site instead of behind a framework's defaults. When the agent layer
-in ``app/graph`` actually needs LangGraph's orchestration, it can wrap this or replace
-it; adding the abstraction before there is a second caller would be guessing at what
-that caller needs.
-
-Nothing in the request path imports this module yet.
+Cascade Priority:
+Tier 1: Groq LPU (qwen/qwen3.8-27b) - Fast Path (~1.0 - 1.5s)
+Tier 2: Hugging Face (meta-llama/Llama-3.1-8B-Instruct) - Cloud fallback
+Tier 3: Google Gemini API - Commercial cloud backup
+Tier 4: Local Ollama (llama3.2 / phi3) - Zero-internet offline safety net (~16s)
 """
 
-from __future__ import annotations
-
+import os
 import logging
-import re
-from typing import Any, Optional
+from typing import Optional
 
-import httpx
-
-from app.core.config import settings
+from app.services.groq_client import GroqClient
+from app.services.huggingface_client import HuggingFaceClient
+from app.llm.gemini_client import gemini_client, LLMUnavailable as GeminiUnavailable
+from app.llm.ollama_client import ollama_client, LLMUnavailable as OllamaUnavailable
 
 logger = logging.getLogger(__name__)
 
+groq_client = GroqClient()
+hf_client = HuggingFaceClient()
 
 class LLMUnavailable(RuntimeError):
-    """Raised when the local model cannot be reached or did not answer.
+    """Raised when all generative models fail."""
 
-    A distinct type because the caller's correct response is specific: fall back to the
-    deterministic output, which already exists and is already complete. A generative
-    summary is an enhancement over ``adherence_analysis_service``'s composed text, so
-    losing it degrades the response rather than failing the request — the same shape as
-    the adherence block in ``evaluate_patient_safety``, and for the same reason.
-    """
+class LLMRouter:
+    def __init__(self):
+        self.groq_client = groq_client
+        self.hf_client = hf_client
+        self.gemini_client = gemini_client
+        self.ollama_client = ollama_client
 
-
-# qwen3 is a reasoning model: left alone it emits its chain of thought wrapped in
-# <think> tags, inline, before the answer. That is unacceptable in a clinical brief for
-# two reasons — a clinician would be reading unreviewed intermediate reasoning as though
-# it were a finding, and the guardrails in app.analysis.response_validator scan the text
-# they are given, so reasoning that speculates about doubling a dose would trip them or,
-# worse, slip through as commentary.
-#
-# Handled twice on purpose. The API flag is the correct fix; the regex is because a
-# model swap or an Ollama upgrade that ignores the flag would otherwise put reasoning
-# into a patient-facing field silently, and this is not a failure worth discovering in
-# production.
-_THINK_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
-
-# An unterminated block means generation was cut off mid-reasoning — drop the remainder
-# rather than shipping half a thought as the answer.
-_THINK_OPEN = re.compile(r"<think>.*", re.DOTALL | re.IGNORECASE)
-
-
-def strip_reasoning(text: str) -> str:
-    """Remove chain-of-thought markup from a completion."""
-    text = _THINK_BLOCK.sub("", text)
-    text = _THINK_OPEN.sub("", text)
-    return text.strip()
-
-
-class OllamaClient:
-    """Minimal async client for a local Ollama daemon."""
-
-    def __init__(
+    async def generate_response(
         self,
-        base_url: Optional[str] = None,
-        model: Optional[str] = None,
-        timeout: float = 120.0,
-    ) -> None:
-        self.base_url = (base_url or settings.OLLAMA_BASE_URL).rstrip("/")
-        self.model = model or settings.OLLAMA_MODEL
-        # Generous, because this is CPU/GPU inference on the same machine serving the
-        # API, not a network call to a warm datacentre. An 8B model's first token can be
-        # seconds away if the weights are cold.
-        self.timeout = timeout
-
-    async def is_available(self) -> bool:
-        """True if the daemon answers and has the configured model pulled.
-
-        Checks the model too, not just the daemon. "Ollama is running" and "the model
-        this deployment is configured for exists" are different facts, and the second is
-        the one that decides whether a request will work — a missing model is a 404 at
-        generation time, which is a confusing way to learn about a typo in .env.
-        """
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(f"{self.base_url}/api/tags")
-                response.raise_for_status()
-                names = {m.get("name", "") for m in response.json().get("models", [])}
-        except (httpx.HTTPError, ValueError) as exc:
-            logger.info("Ollama not reachable at %s: %s", self.base_url, exc)
-            return False
-
-        if self.model in names:
-            return True
-        logger.warning(
-            "Ollama is running but model %r is not pulled. Available: %s. "
-            "Run: ollama pull %s",
-            self.model,
-            sorted(names) or "none",
-            self.model,
-        )
-        return False
-
-    async def generate(
-        self,
-        prompt: str,
-        *,
-        temperature: float = 0.2,
-        num_ctx: int = 8192,
-        think: bool = False,
-        format: Optional[str | dict] = None,
-        timeout: Optional[float] = None,
+        messages: list[dict],
+        temperature: float = 0.1,
+        max_tokens: int = 600
     ) -> str:
-        """Run one non-streaming completion and return the text.
-
-        ``temperature`` defaults low. This is not a creative writing task: the same
-        metrics should not produce a differently-toned clinical brief on each request,
-        and a clinician comparing two reviews of the same patient needs the difference
-        to mean something.
-
-        ``num_ctx`` is set explicitly rather than left to the model's default, which
-        Ollama may set well below what a prompt carrying retrieved evidence plus a
-        4000-character patient note needs. Silent truncation drops the *end* of the
-        prompt — which, given the section order in ``prompt.py``, is the untrusted
-        patient text and the trailing safety reminder.
-        """
-        payload: dict[str, Any] = {
-            "model": self.model,
-            "prompt": prompt,
-            "stream": False,
-            "think": think,
-            "options": {"temperature": temperature, "num_ctx": num_ctx},
-        }
-        if format:
-            payload["format"] = format
-
-        try:
-            async with httpx.AsyncClient(timeout=timeout or self.timeout) as client:
-                response = await client.post(
-                    f"{self.base_url}/api/generate", json=payload
+        # ---------------------------------------------------------
+        # TIER 1: Groq LPU (Fast Path ~1.5s)
+        # ---------------------------------------------------------
+        if self.groq_client and await self.groq_client.is_available():
+            try:
+                logger.info("Routing to Tier 1: Groq LPU...")
+                return await self.groq_client.generate_response(
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens
                 )
-                response.raise_for_status()
-                body = response.json()
-        except httpx.HTTPError as exc:
-            raise LLMUnavailable(
-                f"Local model {self.model!r} at {self.base_url} did not respond: {exc}"
-            ) from exc
-        except ValueError as exc:
-            raise LLMUnavailable(
-                f"Local model {self.model!r} returned a non-JSON body: {exc}"
-            ) from exc
+            except Exception as e:
+                logger.warning(f"Tier 1 (Groq) failed: {e}. Cascading to Tier 2 (Hugging Face)...")
 
-        text = strip_reasoning(body.get("response", ""))
-        if not text:
-            raise LLMUnavailable(
-                f"Local model {self.model!r} returned an empty completion."
-            )
-        return text
+        # ---------------------------------------------------------
+        # TIER 2: Hugging Face Serverless Router
+        # ---------------------------------------------------------
+        if self.hf_client and (self.hf_client.token or os.getenv("HF_TOKEN")):
+            try:
+                logger.info("Routing to Tier 2: Hugging Face Router...")
+                return await self.hf_client.generate_response(
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+            except Exception as e:
+                logger.warning(f"Tier 2 (Hugging Face) failed: {e}. Cascading to Tier 3 (Gemini)...")
 
+        # ---------------------------------------------------------
+        # TIER 3: Gemini API (Cloud Backup)
+        # ---------------------------------------------------------
+        if self.gemini_client and await self.gemini_client.is_available():
+            try:
+                logger.info("Routing to Tier 3: Gemini...")
+                prompt = "\n".join(m.get("content", "") for m in messages)
+                return await self.gemini_client.generate(prompt=prompt, temperature=temperature)
+            except Exception as e:
+                logger.warning(f"Tier 3 (Gemini) failed: {e}. Cascading to Tier 4 (Local Ollama)...")
 
-# Module-level default, constructed from settings. Cheap to make — it holds no
-# connection, opening one per call instead, so there is no pool to share or shut down.
-ollama_client = OllamaClient()
+        # ---------------------------------------------------------
+        # TIER 4: Local Ollama (Offline Safety Net)
+        # ---------------------------------------------------------
+        if self.ollama_client and await self.ollama_client.is_available():
+            try:
+                logger.info("Routing to Tier 4: Local Ollama (Offline)...")
+                return await self.ollama_client.generate_chat(
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+            except Exception as e:
+                logger.error(f"All LLM tiers failed. Last error (Ollama): {e}")
+                raise LLMUnavailable(f"All generative AI tiers failed to respond: {e}") from e
+
+        raise LLMUnavailable("All generative AI models (Groq, HF, Gemini, Ollama) failed or are unavailable.")
+
+llm_router = LLMRouter()
+
+async def get_generative_response(
+    prompt: str,
+    *,
+    format: Optional[str | dict] = None,
+    timeout: Optional[float] = None,
+    temperature: Optional[float] = None,
+) -> tuple[str, str]:
+    """Get a response from the generative model router.
+    
+    Priority cascade:
+    1. Groq LPU (GENERATED_GROQ)
+    2. Hugging Face (GENERATED_HF)
+    3. Gemini (GENERATED_GEMINI)
+    4. Ollama (GENERATED_OLLAMA)
+    
+    Returns a tuple of (response_text, generation_status).
+    Raises LLMUnavailable if all fail.
+    """
+    messages = [{"role": "user", "content": prompt}]
+    temp = temperature if temperature is not None else 0.1
+
+    # ---------------------------------------------------------
+    # TIER 1: Groq LPU (Fast Path ~1.0 - 1.5s)
+    # ---------------------------------------------------------
+    if await groq_client.is_available():
+        try:
+            logger.info("Attempting generative call with Groq (Tier 1)...")
+            text = await groq_client.generate_response(messages=messages, temperature=temp)
+            logger.info("Groq generation successful.")
+            return text, "GENERATED_GROQ"
+        except Exception as groq_exc:
+            logger.warning(f"Groq generation failed: {groq_exc}. Falling back to Hugging Face...")
+    else:
+        logger.warning("Groq not configured or available. Falling back to Hugging Face...")
+
+    # ---------------------------------------------------------
+    # TIER 2: Hugging Face (Cloud Fallback)
+    # ---------------------------------------------------------
+    try:
+        logger.info("Attempting generative call with Hugging Face (Tier 2)...")
+        hf_temp = temperature if temperature is not None else 0.2
+        text = await hf_client.generate_response(messages=messages, temperature=hf_temp)
+        logger.info("Hugging Face generation successful.")
+        return text, "GENERATED_HF"
+    except Exception as hf_exc:
+        logger.warning(f"Hugging Face generation failed: {hf_exc}. Falling back to Gemini...")
+
+    # ---------------------------------------------------------
+    # TIER 3: Google Gemini (Commercial Cloud Backup)
+    # ---------------------------------------------------------
+    if await gemini_client.is_available():
+        try:
+            logger.info("Attempting generative call with Gemini (Tier 3)...")
+            text = await gemini_client.generate(prompt=prompt, format=format, timeout=timeout)
+            logger.info("Gemini generation successful.")
+            return text, "GENERATED_GEMINI"
+        except GeminiUnavailable as exc:
+            logger.warning(f"Gemini generation failed: {exc}. Falling back to Ollama...")
+        except Exception as gemini_exc:
+            logger.warning(f"Gemini call error: {gemini_exc}. Falling back to Ollama...")
+    else:
+        logger.warning("Gemini not configured or available. Falling back to Ollama...")
+
+    # ---------------------------------------------------------
+    # TIER 4: Local Ollama (Zero-Internet Offline Safety Net)
+    # ---------------------------------------------------------
+    if await ollama_client.is_available():
+        try:
+            logger.info("Attempting generative call with Ollama (Tier 4)...")
+            gen_kwargs = {}
+            if temperature is not None:
+                gen_kwargs["temperature"] = temperature
+            text = await ollama_client.generate(prompt=prompt, format=format, timeout=timeout, **gen_kwargs)
+            logger.info("Ollama generation successful.")
+            return text, "GENERATED_OLLAMA"
+        except OllamaUnavailable as exc:
+            logger.error(f"Ollama generation failed: {exc}")
+            raise LLMUnavailable("All models (Groq, HF, Gemini, Ollama) failed to generate a response.") from exc
+    else:
+        logger.warning("Ollama not available.")
+
+    raise LLMUnavailable("All models (Groq, HF, Gemini, Ollama) failed or are unavailable.")

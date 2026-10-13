@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from typing import Any, List
+from typing import Any, List, Optional
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 from app.schemas.prescription import (
@@ -22,8 +22,84 @@ from app.models.user import User
 from app.models.types import utcnow
 from app.services import prescription_service, schedule_service
 from app.services.schedule_service import UnschedulableMedicationsError
+from pydantic import BaseModel
+from app.graph.prescription_ingestion import prescription_orchestrator
+
+class PrescriptionUploadRequest(BaseModel):
+    image_base64: Optional[str] = None
+    raw_ocr_text: Optional[str] = None
 
 router = APIRouter()
+
+@router.post("/upload", response_model=PrescriptionResponse, status_code=status.HTTP_201_CREATED)
+async def upload_prescription(
+    upload_data: PrescriptionUploadRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Upload prescription image or text and process via LangGraph OCR orchestration."""
+    result = await db.execute(select(Patient).filter(Patient.user_id == current_user.id))
+    patient = result.scalars().first()
+    if not patient:
+        raise HTTPException(status_code=400, detail="User is not a patient")
+
+    active_meds_res = await db.execute(
+        select(PrescribedMedication.medicine_name).filter(
+            PrescribedMedication.patient_id == patient.id,
+            PrescribedMedication.is_active.is_(True),
+        )
+    )
+    existing_meds = [row[0] for row in active_meds_res.all()]
+
+    state = await prescription_orchestrator.ainvoke({
+        "image_base64": upload_data.image_base64,
+        "raw_ocr_text": upload_data.raw_ocr_text,
+        "patient_id": patient.id,
+        "patient_allergies": patient.allergies or [],
+        "patient_conditions": patient.chronic_conditions or [],
+        "existing_medications": existing_meds,
+    })
+
+    if state.get("error"):
+        raise HTTPException(status_code=422, detail=state["error"])
+
+    if not state.get("is_safe"):
+        findings = "; ".join(state.get("safety_findings", []))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Prescription rejected by AI safety check: {findings}",
+        )
+
+    parsed = state.get("parsed_prescription")
+    if not parsed:
+        raise HTTPException(status_code=422, detail="Failed to parse prescription data")
+
+    presc_data = PrescriptionCreate(**parsed)
+    prescription_dict = presc_data.model_dump(exclude={"medications"})
+    prescription = Prescription(
+        patient_id=patient.id,
+        verification_status="PENDING",
+        raw_ocr_text=state.get("raw_ocr_text"),
+        **prescription_dict,
+    )
+
+    db.add(prescription)
+    await db.flush()
+
+    for med_data in presc_data.medications:
+        med = PrescribedMedication(
+            prescription_id=prescription.id,
+            patient_id=patient.id,
+            **med_data.model_dump(),
+        )
+        db.add(med)
+
+    await db.commit()
+    await db.refresh(prescription)
+    
+    stmt = select(Prescription).options(selectinload(Prescription.medications)).filter(Prescription.id == prescription.id)
+    result = await db.execute(stmt)
+    return result.scalars().first()
 
 
 def _today_for_patient(patient: Patient) -> date:
@@ -81,16 +157,21 @@ async def create_prescription(
 
 @router.get("", response_model=List[PrescriptionResponse])
 async def list_prescriptions(
+    patient_id: Optional[int] = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
-    """List patient's prescriptions."""
-    result = await db.execute(select(Patient).filter(Patient.user_id == current_user.id))
-    patient = result.scalars().first()
-    if not patient:
-        return []
+    """List patient's prescriptions (or specific patient's prescriptions for clinicians/admins)."""
+    if patient_id is not None and current_user.role in (UserRole.CLINICIAN.value, UserRole.ADMIN.value):
+        target_patient_id = patient_id
+    else:
+        result = await db.execute(select(Patient).filter(Patient.user_id == current_user.id))
+        patient = result.scalars().first()
+        if not patient:
+            return []
+        target_patient_id = patient.id
         
-    stmt = select(Prescription).options(selectinload(Prescription.medications)).filter(Prescription.patient_id == patient.id)
+    stmt = select(Prescription).options(selectinload(Prescription.medications)).filter(Prescription.patient_id == target_patient_id)
     result = await db.execute(stmt)
     return result.scalars().all()
 

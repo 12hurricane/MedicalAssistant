@@ -201,25 +201,52 @@ async def evaluate_patient_safety(
         )
 
     # 8. Compile Structured Evidence
+    import anyio.to_thread
+    from app.rag.retriever import get_default_retriever
+    
+    assessment_draft = SafetyAssessment(
+        patient_id=patient_id,
+        evaluated_at=now,
+        risk_level="LOW",
+        requires_human_review=False,
+        recommended_action="",
+        medication_interactions=interaction_alerts,
+        contraindications=contraindication_alerts,
+        duplicate_therapies=duplicate_alerts,
+        adherence_risks=adherence_alerts,
+    )
+    retriever = get_default_retriever()
+    evidence_bundle = await anyio.to_thread.run_sync(
+        retriever.retrieve_evidence_bundle, assessment_draft
+    )
+    
+    def _citations_for(finding_id: str, fallback: str) -> str:
+        for res in evidence_bundle.results:
+            if res.finding_id == finding_id and res.citable_evidence:
+                return "; ".join(f"[{c.document_id}] {c.source} - {c.section}" for c in res.citable_evidence)
+        return fallback
+
     evidence: List[SafetyEvidence] = []
 
     for alert in interaction_alerts:
+        f_id = f"FINDING-INT-{alert.drug_a.lower()}-{alert.drug_b.lower()}"
         evidence.append(
             SafetyEvidence(
                 category="DRUG_INTERACTION",
                 finding=f"Interaction between {alert.drug_a} and {alert.drug_b}: {alert.clinical_effect}",
                 severity=alert.severity.value,
-                reference_source=alert.source,
+                reference_source=_citations_for(f_id, alert.source),
             )
         )
 
     for alert in contraindication_alerts:
+        f_id = f"FINDING-CONTRA-{alert.medication.lower()}-{alert.trigger.lower()}"
         evidence.append(
             SafetyEvidence(
                 category="CONTRAINDICATION",
                 finding=f"{alert.medication} contraindicated with {alert.trigger} ({alert.contraindication_type}): {alert.clinical_risk}",
                 severity=alert.severity.value,
-                reference_source="Clinical Practice Guidelines",
+                reference_source=_citations_for(f_id, "Clinical Practice Guidelines"),
             )
         )
 
@@ -234,12 +261,13 @@ async def evaluate_patient_safety(
         )
 
     for alert in adherence_alerts:
+        f_id = "FINDING-ADH-RISK"
         evidence.append(
             SafetyEvidence(
                 category="ADHERENCE_RISK",
                 finding=alert.clinical_risk,
                 severity="HIGH" if alert.critical_drugs_affected else "MODERATE",
-                reference_source="Deterministic Adherence Metrics Engine",
+                reference_source=_citations_for(f_id, "Deterministic Adherence Metrics Engine"),
             )
         )
 

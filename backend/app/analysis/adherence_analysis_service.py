@@ -46,8 +46,10 @@ from app.analysis.schemas import (
     ClinicalBrief,
     PatientExplanation,
     GenerativeClinicalInsights,
+    GenerationStatus,
+    LLMPatientContextExtraction,
 )
-from app.llm.client import ollama_client, LLMUnavailable
+from app.llm.client import get_generative_response, LLMUnavailable
 from app.llm.prompt import build_clinician_brief_prompt
 from app.rag.retriever import FindingEvidenceBundle, get_default_retriever
 from app.rules.safety_assessment import SafetyAssessment, evaluate_patient_safety
@@ -105,7 +107,6 @@ class AdherenceAnalysisService:
     def __init__(self):
         self.retriever = get_default_retriever()
         self.validator = ResponseValidator()
-        self.ollama_client = ollama_client
 
     async def evaluate_and_generate(
         self,
@@ -152,17 +153,32 @@ class AdherenceAnalysisService:
         barriers = classify_adherence_barriers(metrics)
 
         # 5. Compose Patient-Facing Explanation (jargon-free, safety-first)
-        patient_explanation = self._build_patient_explanation(metrics, safety, barriers)
+        patient_explanation = self._build_patient_explanation(metrics, safety, barriers, evidence_bundle)
 
         # 6. Compose Clinical Brief (deterministic base, evidence-backed)
         clinical_brief = self._build_clinical_brief(metrics, safety, barriers, evidence_bundle)
 
-        if await self.ollama_client.is_available():
-            try:
-                insights = await self._generate_clinical_brief(metrics, safety, evidence_bundle)
-                clinical_brief.insights = insights
-            except (LLMUnavailable, ValidationError, ValueError) as exc:
-                logger.warning("Generative insights failed, falling back to deterministic base: %s", exc)
+        generation_status = GenerationStatus.FALLBACK
+
+        try:
+            insights, status = await self._generate_clinical_brief(metrics, safety, evidence_bundle)
+            
+            # Merge LLM barrier context into the deterministic barriers
+            for llm_barrier in insights.barrier_context:
+                # Find matching deterministic barrier by category
+                match = next((b for b in clinical_brief.insights.possible_barriers if b.category == llm_barrier.barrier_category), None)
+                if match:
+                    match.patient_reported_text = llm_barrier.patient_quote
+                    match.follow_up_question = llm_barrier.follow_up_question
+            
+            if status == "GENERATED_OLLAMA":
+                generation_status = GenerationStatus.GENERATED_OLLAMA
+            elif status == "GENERATED_GEMINI":
+                generation_status = GenerationStatus.GENERATED_GEMINI
+        except (LLMUnavailable, ValidationError, ValueError) as exc:
+            logger.warning("Generative insights failed, falling back to deterministic base: %s", exc)
+
+        clinical_brief.generation_status = generation_status
 
         # 7. Assemble Candidate Result
         candidate = AdherenceAnalysisResult(
@@ -174,6 +190,7 @@ class AdherenceAnalysisService:
             patient_explanation=patient_explanation,
             clinical_brief=clinical_brief,
             validation_passed=True,
+            generation_status=generation_status,
         )
 
         # 8. Run Rigorous Response Validator Guardrails
@@ -191,6 +208,7 @@ class AdherenceAnalysisService:
         metrics: AdherenceMetrics,
         safety: SafetyAssessment,
         barriers: List,
+        evidence_bundle: FindingEvidenceBundle,
     ) -> PatientExplanation:
         """Build empathetic, jargon-free explanation for the patient."""
         # Summary
@@ -265,12 +283,19 @@ class AdherenceAnalysisService:
         else:
             contact_msg = "If you experience uncomfortable side effects or have trouble taking doses on time, reach out to your doctor or pharmacist."
 
+        # Citations
+        citations: List[str] = []
+        for res in evidence_bundle.results:
+            for chunk in res.citable_evidence:
+                citations.append(f"[{chunk.document_id} | {chunk.version}] {chunk.source} - {chunk.section}")
+
         return PatientExplanation(
             summary=summary,
             what_the_system_found=what_found,
             why_it_matters=why_matters,
             what_to_do_next=what_to_do_next,
             when_to_contact_care_team=contact_msg,
+            citations=citations,
         )
 
     async def _generate_clinical_brief(
@@ -278,7 +303,7 @@ class AdherenceAnalysisService:
         metrics: AdherenceMetrics,
         safety: SafetyAssessment,
         evidence_bundle: FindingEvidenceBundle,
-    ) -> GenerativeClinicalInsights:
+    ) -> tuple[LLMPatientContextExtraction, str]:
         """Call the generative model to synthesize clinical insights."""
         patient_texts = [
             e.skip_reason for e in metrics.reasoned_events if e.skip_reason
@@ -289,20 +314,32 @@ class AdherenceAnalysisService:
 
         prompt = build_clinician_brief_prompt(
             safety_assessment_json=json.dumps(dataclasses.asdict(safety), default=str),
-            evidence_json=json.dumps(dataclasses.asdict(evidence_bundle), default=str),
+            evidence_json=json.dumps(evidence_bundle.to_llm_projection(), default=str),
             patient_texts=patient_texts,
             structured_skip_reasons=skip_codes,
         )
 
-        response_json = await self.ollama_client.generate(
-            prompt, timeout=600.0, format="json"
+        response_json, status = await get_generative_response(
+            prompt, timeout=600.0, format="json", temperature=0.0
         )
-        insights = GenerativeClinicalInsights.model_validate_json(response_json)
-        for barrier in insights.possible_barriers:
-            barrier.patient_reported_text = sanitize_patient_reported_text(
-                barrier.patient_reported_text
-            )
-        return insights
+        insights = LLMPatientContextExtraction.model_validate_json(response_json)
+        
+        # Grounding check: verify patient quotes are actually from the patient texts.
+        for barrier in insights.barrier_context:
+            raw_quote = barrier.patient_quote
+            sanitized = sanitize_patient_reported_text(raw_quote)
+            if sanitized:
+                # A simple grounding check: the string must appear in one of the patient texts.
+                found = False
+                for pt in patient_texts:
+                    if sanitized.lower() in pt.lower():
+                        found = True
+                        break
+                if not found:
+                    sanitized = None
+            barrier.patient_quote = sanitized
+
+        return insights, status
 
     def _build_clinical_brief(
         self,
@@ -347,5 +384,6 @@ class AdherenceAnalysisService:
             adherence_rate=metrics.adherence_rate,
             safety_risk_level=safety.risk_level,
             requires_human_review=safety.requires_human_review,
+            citations=citations,
             insights=insights,
         )

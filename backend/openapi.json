@@ -254,6 +254,85 @@
         ]
       }
     },
+    "/api/v1/patients": {
+      "get": {
+        "tags": [
+          "patients"
+        ],
+        "summary": "List Patients",
+        "description": "Clinician or Admin: List patient roster with optional search.",
+        "operationId": "list_patients_api_v1_patients_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "skip",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Skip"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PatientResponse"
+                  },
+                  "title": "Response List Patients Api V1 Patients Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/patients/me": {
       "get": {
         "tags": [
@@ -324,6 +403,54 @@
             "OAuth2PasswordBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/patients/{patient_id}": {
+      "get": {
+        "tags": [
+          "patients"
+        ],
+        "summary": "Get Patient Profile",
+        "description": "Clinician or Admin: Get a specific patient's profile.",
+        "operationId": "get_patient_profile_api_v1_patients__patient_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Patient Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/patients/me/safety": {
@@ -626,35 +753,6 @@
       }
     },
     "/api/v1/prescriptions": {
-      "get": {
-        "tags": [
-          "prescriptions"
-        ],
-        "summary": "List Prescriptions",
-        "description": "List patient's prescriptions.",
-        "operationId": "list_prescriptions_api_v1_prescriptions_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/PrescriptionResponse"
-                  },
-                  "type": "array",
-                  "title": "Response List Prescriptions Api V1 Prescriptions Get"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      },
       "post": {
         "tags": [
           "prescriptions"
@@ -662,15 +760,20 @@
         "summary": "Create Prescription",
         "description": "Create prescription manually.",
         "operationId": "create_prescription_api_v1_prescriptions_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/PrescriptionCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -693,12 +796,64 @@
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "prescriptions"
+        ],
+        "summary": "List Prescriptions",
+        "description": "List patient's prescriptions (or specific patient's prescriptions for clinicians/admins).",
+        "operationId": "list_prescriptions_api_v1_prescriptions_get",
         "security": [
           {
             "OAuth2PasswordBearer": []
           }
-        ]
+        ],
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Patient Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PrescriptionResponse"
+                  },
+                  "title": "Response List Prescriptions Api V1 Prescriptions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/prescriptions/{id}": {
@@ -834,6 +989,58 @@
         ]
       }
     },
+    "/api/v1/schedule/{schedule_id}/versions": {
+      "get": {
+        "tags": [
+          "schedule"
+        ],
+        "summary": "Get Schedule Versions",
+        "description": "Retrieve the version history (audit trail) for a specific schedule.\n\nClinicians and admins can inspect the full history of schedule changes to\nunderstand when and why dose times, frequencies, or statuses were altered.",
+        "operationId": "get_schedule_versions_api_v1_schedule__schedule_id__versions_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Schedule Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduleVersionResponse"
+                  },
+                  "title": "Response Get Schedule Versions Api V1 Schedule  Schedule Id  Versions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/adherence/log": {
       "post": {
         "tags": [
@@ -904,6 +1111,22 @@
               "default": "7d",
               "title": "Period"
             }
+          },
+          {
+            "name": "patient_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Patient Id"
+            }
           }
         ],
         "responses": {
@@ -936,7 +1159,7 @@
           "adherence"
         ],
         "summary": "Get Adherence Analysis",
-        "description": "Deterministic adherence analysis: patient explanation, barrier assessment and\nclinician brief, composed from the safety assessment, the adherence metrics and\nretrieved clinical evidence.\n\nThis is not AI and not an LLM \u2014 there is no model call in the pipeline. Output is\nreproducible for identical inputs. Deterministic safety invariants (risk level,\nhuman-review flag) and evidence citations are preserved exactly as the rules\nengine produced them; the composition layer cannot soften or overrule them.",
+        "description": "Deterministic adherence analysis: patient explanation, barrier assessment and\nclinician brief, composed from the safety assessment, the adherence metrics and\nretrieved clinical evidence.\n\nThis is not AI and not an LLM \u2014 there is no model call in the pipeline. Output is\nreproducible for identical inputs. Deterministic safety invariants (risk level,\nhuman-review flag) and evidence citations are preserved exactly as the rules",
         "operationId": "get_adherence_analysis_api_v1_adherence_analysis_get",
         "security": [
           {
@@ -952,6 +1175,22 @@
               "type": "string",
               "default": "7d",
               "title": "Period"
+            }
+          },
+          {
+            "name": "patient_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Patient Id"
             }
           }
         ],
@@ -977,6 +1216,111 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/adherence/events/{event_id}/correct": {
+      "post": {
+        "tags": [
+          "adherence"
+        ],
+        "summary": "Correct Dose Event",
+        "description": "Correct a mislogged dose event.\n\nClinicians only. Writes an audit row to ``medication_event_corrections``\npreserving the previous status, the corrected status, who made the change,\nand why. The original event's status is updated in place \u2014 the correction\nrow is what preserves history.\n\nDoes not allow correcting to the same status (no-op corrections pollute\nthe audit trail with entries that changed nothing).",
+        "operationId": "correct_dose_event_api_v1_adherence_events__event_id__correct_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "event_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Event Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventCorrectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventCorrectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent/chat": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Chat With Agent",
+        "description": "Chat with the AI medication assistant.\n\nProtected by get_current_user authorization (patient-scoped).\nUser message is routed through build_prompt's untrusted-text fencing,\ncharacter neutralization, and forgery defense.",
+        "operationId": "chat_with_agent_api_v1_agent_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentChatResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
     "/health": {
@@ -1274,6 +1618,34 @@
         "title": "AdminUserCreate",
         "description": "Privileged account creation. Reachable only by an authenticated ADMIN.\n\nThis is the only place ``role`` is writable over HTTP, and the values it accepts\nare constrained by :class:`PrivilegedRole` rather than by :class:`UserRole`."
       },
+      "AgentChatRequest": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "The patient's message to the AI agent."
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "AgentChatRequest"
+      },
+      "AgentChatResponse": {
+        "properties": {
+          "response": {
+            "type": "string",
+            "title": "Response",
+            "description": "The AI agent's response text."
+          }
+        },
+        "type": "object",
+        "required": [
+          "response"
+        ],
+        "title": "AgentChatResponse"
+      },
       "BarrierCategory": {
         "type": "string",
         "enum": [
@@ -1424,6 +1796,13 @@
           "requires_human_review": {
             "type": "boolean",
             "title": "Requires Human Review"
+          },
+          "citations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Citations"
           },
           "insights": {
             "anyOf": [
@@ -1707,6 +2086,80 @@
           "recommendation"
         ],
         "title": "DuplicateTherapyAlertResponse"
+      },
+      "EventCorrectionRequest": {
+        "properties": {
+          "new_status": {
+            "type": "string",
+            "title": "New Status",
+            "description": "The corrected status: TAKEN, SKIPPED, or MISSED."
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Reason",
+            "description": "Mandatory clinical reason for the correction."
+          }
+        },
+        "type": "object",
+        "required": [
+          "new_status",
+          "reason"
+        ],
+        "title": "EventCorrectionRequest",
+        "description": "Clinician request to correct a mislogged dose event."
+      },
+      "EventCorrectionResponse": {
+        "properties": {
+          "correction_id": {
+            "type": "integer",
+            "title": "Correction Id"
+          },
+          "event_id": {
+            "type": "integer",
+            "title": "Event Id"
+          },
+          "previous_status": {
+            "type": "string",
+            "title": "Previous Status"
+          },
+          "new_status": {
+            "type": "string",
+            "title": "New Status"
+          },
+          "corrected_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Corrected By"
+          },
+          "corrected_at": {
+            "type": "string",
+            "title": "Corrected At"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "correction_id",
+          "event_id",
+          "previous_status",
+          "new_status",
+          "corrected_by",
+          "corrected_at",
+          "reason"
+        ],
+        "title": "EventCorrectionResponse",
+        "description": "Confirmation of a dose event correction with audit trail."
       },
       "EvidenceStatus": {
         "type": "string",
@@ -2068,6 +2521,13 @@
           "when_to_contact_care_team": {
             "type": "string",
             "title": "When To Contact Care Team"
+          },
+          "citations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Citations"
           }
         },
         "type": "object",
@@ -2159,6 +2619,28 @@
           "timezone": {
             "type": "string",
             "title": "Timezone"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
           },
           "created_at": {
             "type": "string",
@@ -2875,6 +3357,52 @@
         "title": "ScheduleGenerationSummary",
         "description": "What schedule generation actually did, reported back to the verifier."
       },
+      "ScheduleVersionResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "schedule_id": {
+            "type": "integer",
+            "title": "Schedule Id"
+          },
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "valid_from": {
+            "type": "string",
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "schedule_data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Schedule Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "schedule_id",
+          "version_number",
+          "valid_from",
+          "schedule_data"
+        ],
+        "title": "ScheduleVersionResponse",
+        "description": "One historical snapshot of a schedule's state."
+      },
       "SkipReasonCode": {
         "type": "string",
         "enum": [
@@ -3194,6 +3722,18 @@
               }
             ],
             "title": "Phone"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone",
+            "description": "IANA timezone name, e.g. 'Asia/Kolkata'"
           }
         },
         "type": "object",

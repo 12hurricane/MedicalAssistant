@@ -3,7 +3,9 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.consent import ConsentRecord
 from app.models.medication_event import MedicationEvent
+from app.models.medication_event_correction import MedicationEventCorrection
 from app.models.medication_schedule import MedicationSchedule
+from app.models.schedule_version import ScheduleVersion
 from app.models.prescribed_medication import PrescribedMedication
 from app.models.prescription import Prescription
 from app.models.adherence_report import AdherenceReport
@@ -11,6 +13,7 @@ from app.models.reminder import Reminder
 from app.models.follow_up_task import FollowUpTask
 from app.models.patient import Patient
 from app.models.user import User
+from app.models.clinician_patient_assignment import ClinicianPatientAssignment
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +41,29 @@ class PatientService:
             update(ConsentRecord)
             .where(ConsentRecord.patient_id == patient_id)
             .values(patient_id=None)
+        )
+        
+        # 1.5. Delete event corrections and schedule versions
+        # event corrections refer to events, but it's safe to delete them first since they cascade from events.
+        # However, to be perfectly explicit:
+        await session.execute(
+            delete(MedicationEventCorrection).where(
+                MedicationEventCorrection.event_id.in_(
+                    select(MedicationEvent.id).where(MedicationEvent.patient_id == patient_id)
+                )
+            )
+        )
+        await session.execute(
+            delete(ScheduleVersion).where(
+                ScheduleVersion.schedule_id.in_(
+                    select(MedicationSchedule.id).where(MedicationSchedule.patient_id == patient_id)
+                )
+            )
+        )
+        
+        # Delete clinician_patient_assignments
+        await session.execute(
+            delete(ClinicianPatientAssignment).where(ClinicianPatientAssignment.patient_id == patient_id)
         )
 
         # 2. Delete medication_events (the bottom of the dependency tree)

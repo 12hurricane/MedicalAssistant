@@ -18,14 +18,14 @@ class AppTypography {
   static const TextStyle displayLarge = TextStyle(
     fontSize: 32,
     height: 1.2,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w900,
     color: AppColors.textPrimary,
   );
 
   static const TextStyle headlineMedium = TextStyle(
     fontSize: 24,
     height: 1.25,
-    fontWeight: FontWeight.w700,
+    fontWeight: FontWeight.w800,
     color: AppColors.textPrimary,
   );
 
@@ -46,14 +46,14 @@ class AppTypography {
   static const TextStyle bodyLarge = TextStyle(
     fontSize: 16,
     height: 1.45,
-    fontWeight: FontWeight.w400,
+    fontWeight: FontWeight.w500,
     color: AppColors.textPrimary,
   );
 
   static const TextStyle bodyMedium = TextStyle(
     fontSize: 14,
     height: 1.45,
-    fontWeight: FontWeight.w400,
+    fontWeight: FontWeight.w300,
     color: AppColors.textSecondary,
   );
 
@@ -98,6 +98,15 @@ class AppTypography {
     height: 1.1,
     fontWeight: FontWeight.w800,
     letterSpacing: 0.9,
+  );
+
+  /// The serif style for AI-generated narrative ("a system wrote you a sentence" tier).
+  static const TextStyle narrative = TextStyle(
+    fontSize: 15,
+    height: 1.5,
+    fontFamily: 'serif',
+    fontWeight: FontWeight.w400,
+    color: AppColors.textPrimary,
   );
 
   static TextTheme get textTheme => const TextTheme(

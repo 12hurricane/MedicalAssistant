@@ -306,15 +306,25 @@ class DoseTile extends StatelessWidget {
   }
 }
 
-String formatLocalTime(String iso) {
+String formatLocalTime(String timeOrIso) {
+  if (timeOrIso.contains(':') && !timeOrIso.contains('T') && !timeOrIso.contains('-')) {
+    final parts = timeOrIso.split(':');
+    final hour = int.tryParse(parts[0]);
+    final minute = parts.length > 1 ? parts[1].padLeft(2, '0') : '00';
+    if (hour != null) {
+      final period = hour >= 12 ? 'PM' : 'AM';
+      final hr = hour % 12 == 0 ? 12 : hour % 12;
+      return '$hr:$minute $period';
+    }
+  }
   try {
-    final dt = DateTime.parse(iso);
+    final dt = DateTime.parse(timeOrIso);
     final hr = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
     final ampm = dt.hour >= 12 ? 'PM' : 'AM';
     final min = dt.minute.toString().padLeft(2, '0');
     return '$hr:$min $ampm';
   } catch (_) {
-    return iso;
+    return timeOrIso;
   }
 }
 

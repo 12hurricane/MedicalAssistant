@@ -154,10 +154,11 @@ async def update_medication(
         exclude_id=id,
     )
     if clash:
+        clash_id = clash.id
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Those details collide with catalogue entry id {clash.id}",
+            detail=f"Those details collide with catalogue entry id {clash_id}",
         )
 
     try:

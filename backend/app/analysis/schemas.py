@@ -43,6 +43,12 @@ class ConfidenceLevel(str, Enum):
     LOW = "LOW"
 
 
+class GenerationStatus(str, Enum):
+    GENERATED_OLLAMA = "GENERATED_OLLAMA"
+    GENERATED_GEMINI = "GENERATED_GEMINI"
+    FALLBACK = "FALLBACK"
+
+
 class BarrierItem(BaseModel):
     """
     Structured adherence barrier hypothesis.
@@ -64,7 +70,21 @@ class BarrierItem(BaseModel):
     follow_up_question: str
     patient_reported_text: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+
+class LLMBarrierContext(BaseModel):
+    barrier_category: BarrierCategory
+    patient_quote: Optional[str] = None
+    follow_up_question: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+
+
+class LLMPatientContextExtraction(BaseModel):
+    barrier_context: List[LLMBarrierContext] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class PatientExplanation(BaseModel):
@@ -74,6 +94,7 @@ class PatientExplanation(BaseModel):
     why_it_matters: str
     what_to_do_next: str
     when_to_contact_care_team: str
+    citations: List[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -87,7 +108,7 @@ class GenerativeClinicalInsights(BaseModel):
     concerning_patterns: List[str] = Field(default_factory=list)
     possible_barriers: List[BarrierItem] = Field(default_factory=list)
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
 class ClinicalBrief(BaseModel):
@@ -101,6 +122,8 @@ class ClinicalBrief(BaseModel):
     # Deterministic fields
     safety_risk_level: str
     requires_human_review: bool
+    citations: List[str] = Field(default_factory=list)
+    generation_status: GenerationStatus = GenerationStatus.FALLBACK
     
     # Generative insights (nullable if LLM fails)
     insights: Optional[GenerativeClinicalInsights] = None
@@ -124,5 +147,6 @@ class AdherenceAnalysisResult(BaseModel):
     patient_explanation: PatientExplanation
     clinical_brief: ClinicalBrief
     validation_passed: bool = True
+    generation_status: GenerationStatus = GenerationStatus.FALLBACK
 
     model_config = ConfigDict(from_attributes=True)

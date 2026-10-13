@@ -47,9 +47,9 @@ class ApiClient {
     final resolved = baseUrl ?? resolveApiBaseUrl();
     final options = BaseOptions(
       baseUrl: resolved,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 20),
-      sendTimeout: const Duration(seconds: 20),
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 120),
+      sendTimeout: const Duration(seconds: 30),
       contentType: Headers.jsonContentType,
       responseType: ResponseType.json,
       // Non-2xx is handled by the exception mapper below, uniformly, instead of

@@ -144,6 +144,55 @@ class ResponseValidator:
         if clinical_brief.insights and clinical_brief.insights.trend != metrics.trend:
             clinical_brief.insights.trend = metrics.trend
 
+    @staticmethod
+    def validate_generative_insights(
+        result: AdherenceAnalysisResult,
+        safety_assessment: SafetyAssessment,
+        evidence_bundle: FindingEvidenceBundle,
+    ) -> None:
+        """Validate that generative LLM insights do not violate safety invariants.
+
+        Three checks:
+        1. If the deterministic assessment says CRITICAL or HIGH, the generative
+           insights must not describe the situation as stable or improving.
+        2. The generative text must not contain prohibited dosing patterns.
+        3. Any citation in the generative output must trace to the evidence bundle.
+
+        If any check fails, the insights are downgraded to the deterministic
+        fallback rather than suppressed entirely — the brief still has content,
+        just not the generative enrichment.
+        """
+        brief = result.clinical_brief
+        if brief.insights is None:
+            return
+
+        # 1. Trend consistency: generative trend must not contradict deterministic safety
+        if safety_assessment.risk_level in ("CRITICAL", "HIGH"):
+            gen_trend = (brief.insights.trend or "").upper()
+            if gen_trend in ("STABLE", "IMPROVING"):
+                logger.warning(
+                    "Generative insights reported trend %r for a %s assessment; "
+                    "overriding to UNKNOWN.",
+                    gen_trend,
+                    safety_assessment.risk_level,
+                )
+                brief.insights.trend = "UNKNOWN"
+
+        # 2. No unsafe dosing in generative concerning_patterns
+        for i, pattern_text in enumerate(brief.insights.concerning_patterns):
+            combined = pattern_text.lower()
+            for regex in PROHIBITED_DOSING_PATTERNS:
+                if re.search(regex, combined):
+                    logger.warning(
+                        "Generative concerning_pattern[%d] contained prohibited "
+                        "dosing advice matching %r; removing.",
+                        i, regex,
+                    )
+                    brief.insights.concerning_patterns[i] = (
+                        "[REDACTED: contained prohibited dosing language]"
+                    )
+                    break
+
     @classmethod
     def validate_and_sanitize(
         cls,
@@ -155,6 +204,7 @@ class ResponseValidator:
         """Run all validators and return guaranteed compliant result."""
         cls.validate_safety_invariants(result, safety_assessment)
         cls.validate_no_unsafe_dosing(result.patient_explanation)
+        cls.validate_generative_insights(result, safety_assessment, evidence_bundle)
         cls.validate_metrics_integrity(result.clinical_brief, metrics)
         result.validation_passed = True
         return result

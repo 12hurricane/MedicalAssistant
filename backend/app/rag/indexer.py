@@ -291,5 +291,5 @@ _GLOBAL_INDEX: Optional[ClinicalCorpusIndex] = None
 def get_default_index() -> ClinicalCorpusIndex:
     global _GLOBAL_INDEX
     if _GLOBAL_INDEX is None:
-        _GLOBAL_INDEX = ClinicalCorpusIndex()
+        _GLOBAL_INDEX = ClinicalCorpusIndex(build_corpus_chunks(include_extended=True))
     return _GLOBAL_INDEX

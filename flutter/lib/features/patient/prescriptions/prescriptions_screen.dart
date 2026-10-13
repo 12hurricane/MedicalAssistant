@@ -134,11 +134,13 @@ class _PrescriptionCard extends StatelessWidget {
     final status = prescription.verificationStatus;
     final color = _statusColor(status);
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      elevation: 0,
-      color: AppColors.surface,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border, width: 1),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -146,7 +148,7 @@ class _PrescriptionCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.receipt_long_outlined,
+                const Icon(Icons.receipt_long_outlined,
                     size: 20, color: AppColors.primary),
                 const SizedBox(width: 8),
                 Expanded(
@@ -165,6 +167,7 @@ class _PrescriptionCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: color.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -172,7 +175,7 @@ class _PrescriptionCard extends StatelessWidget {
                       Icon(_statusIcon(status), size: 12, color: color),
                       const SizedBox(width: 4),
                       Text(
-                        status[0] + status.substring(1).toLowerCase(),
+                        status.toUpperCase(),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -197,7 +200,7 @@ class _PrescriptionCard extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined,
+                const Icon(Icons.calendar_today_outlined,
                     size: 14, color: AppColors.textDisabled),
                 const SizedBox(width: 6),
                 Text(
@@ -210,11 +213,11 @@ class _PrescriptionCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                Icon(Icons.medication_outlined,
+                const Icon(Icons.medication_outlined,
                     size: 14, color: AppColors.textDisabled),
                 const SizedBox(width: 6),
                 Text(
-                  '${prescription.medications.length} medication${prescription.medications.length == 1 ? '' : 's'}',
+                  '${prescription.medications.length} drug${prescription.medications.length == 1 ? '' : 's'}',
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textDisabled,
@@ -222,6 +225,67 @@ class _PrescriptionCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (prescription.medications.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              const Divider(color: AppColors.border, height: 1),
+              const SizedBox(height: 12),
+              for (final med in prescription.medications) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        margin: const EdgeInsets.only(top: 6, right: 8),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  med.medicineName,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                                if (med.dose != null) ...[
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    med.dose!,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${med.frequency}${med.durationDays != null ? ' • ${med.durationDays} days' : ''}${med.instructions != null ? ' • ${med.instructions}' : ''}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ],
         ),
       ),

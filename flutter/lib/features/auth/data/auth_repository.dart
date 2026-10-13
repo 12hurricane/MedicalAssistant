@@ -37,6 +37,7 @@ class AuthRepository {
     required String email,
     required String password,
     String? phone,
+    String? timezone,
   }) async {
     await _client.postObject(
       ApiEndpoints.register,
@@ -45,6 +46,7 @@ class AuthRepository {
         email: email,
         password: password,
         phone: phone,
+        timezone: timezone,
       ).toJson(),
       decode: UserResponse.fromJson,
       skipAuth: true,

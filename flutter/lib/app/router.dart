@@ -9,8 +9,13 @@ import '../features/auth/presentation/splash_screen.dart';
 import '../features/auth/presentation/unsupported_role_screen.dart';
 import '../features/auth/state/auth_controller.dart';
 import '../features/clinician/dashboard/clinician_dashboard_screen.dart';
+import '../features/clinician/dashboard/patient_roster_screen.dart';
 import '../features/patient/dashboard/patient_shell_screen.dart';
 import '../features/patient/medications/dose_detail_screen.dart';
+import '../features/patient/agent/agent_chat_screen.dart';
+import '../features/patient/adherence/adherence_analytics_screen.dart';
+
+import '../features/patient/prescriptions/prescription_upload_screen.dart';
 
 /// Every route path, in one place.
 class AppRoutes {
@@ -22,16 +27,17 @@ class AppRoutes {
   static const String unsupportedRole = '/unsupported-role';
 
   static const String patientDashboard = '/patient';
+  static const String patientAgentChat = '/patient/chat';
+  static const String patientAdherence = '/patient/adherence';
+  static const String patientUpload = '/patient/upload';
 
   /// One dose from today's schedule, keyed by its schedule id.
-  ///
-  /// Not a medication id: `TodayDoseResponse` carries no `medication_id`, so there is
-  /// nothing to resolve against the catalogue. Keying on what the payload actually
-  /// contains keeps the route honest instead of inventing an identifier.
   static const String patientDose = '/patient/doses/:scheduleId';
   static String patientDoseOf(int scheduleId) => '/patient/doses/$scheduleId';
 
   static const String clinicianDashboard = '/clinician';
+  static const String clinicianPatientReview = '/clinician/patient/:patientId';
+  static String clinicianPatientReviewOf(int patientId) => '/clinician/patient/$patientId';
 }
 
 /// Where a signed-in user belongs.
@@ -142,11 +148,36 @@ final routerProvider = Provider<GoRouter>((ref) {
               return DoseDetailScreen(scheduleId: scheduleId);
             },
           ),
+          GoRoute(
+            path: 'chat',
+            builder: (context, state) => const AgentChatScreen(),
+          ),
+          GoRoute(
+            path: 'adherence',
+            builder: (context, state) => const AdherenceAnalyticsScreen(),
+          ),
+          GoRoute(
+            path: 'upload',
+            builder: (context, state) => const PrescriptionUploadScreen(),
+          ),
         ],
       ),
       GoRoute(
         path: AppRoutes.clinicianDashboard,
-        builder: (context, state) => const ClinicianDashboardScreen(),
+        builder: (context, state) => const PatientRosterScreen(),
+        routes: [
+          GoRoute(
+            path: 'patient/:patientId',
+            builder: (context, state) {
+              final raw = state.pathParameters['patientId'];
+              final patientId = int.tryParse(raw ?? '');
+              if (patientId == null) {
+                return ClinicianDashboardScreen.invalidId(raw);
+              }
+              return ClinicianDashboardScreen(patientId: patientId);
+            },
+          ),
+        ],
       ),
     ],
   );

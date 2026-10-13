@@ -76,8 +76,8 @@ def forbid_live_ollama_in_tests(request, monkeypatch):
     """
     if "live_llm" in request.keywords:
         return
-    from app.llm.client import ollama_client
-    monkeypatch.setattr(ollama_client, "is_available", AsyncMock(return_value=False))
+    from app.llm.gemini_client import gemini_client
+    monkeypatch.setattr(gemini_client, "is_available", AsyncMock(return_value=False))
 
 
 @pytest.fixture

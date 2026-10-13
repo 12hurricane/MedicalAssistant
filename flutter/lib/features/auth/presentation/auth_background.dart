@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_colors.dart';
 
-/// Flat, high-contrast background for clinical authentication screens.
+/// Premium Dark UI background for authentication screens.
 ///
-/// Strictly eliminates consumer SaaS decorative gradients, blurred ambient blobs,
-/// and backdrop filters to preserve visual clarity, accessibility, and audit readiness.
+/// Features a highly controlled, subtle radial gradient to provide depth
+/// and a modern aesthetic, without sacrificing contrast or readability.
 class AuthBackground extends StatelessWidget {
   const AuthBackground({super.key, required this.child});
 
@@ -17,7 +17,15 @@ class AuthBackground extends StatelessWidget {
       width: double.infinity,
       height: double.infinity,
       decoration: const BoxDecoration(
-        color: AppColors.background,
+        gradient: RadialGradient(
+          center: Alignment(-0.8, -0.8), // Top left corner
+          radius: 1.5,
+          colors: [
+            AppColors.surfaceMuted, // Subtle glow
+            AppColors.background,   // Deep slate
+          ],
+          stops: [0.0, 1.0],
+        ),
       ),
       child: SafeArea(child: child),
     );

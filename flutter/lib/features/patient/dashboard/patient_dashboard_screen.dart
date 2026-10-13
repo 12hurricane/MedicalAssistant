@@ -131,8 +131,10 @@ class _ScheduleBody extends ConsumerWidget {
 
     final session = ref.watch(currentSessionProvider);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 120), // Extra bottom padding for spatial feel
+    return Scrollbar(
+      thumbVisibility: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 120), // Extra bottom padding for spatial feel
       children: [
         if (session != null) ...[
           _PatientHeader(session: session),
@@ -223,7 +225,7 @@ class _ScheduleBody extends ConsumerWidget {
           ),
         ],
       ],
-    );
+    ));
   }
 }
 

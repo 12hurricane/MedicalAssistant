@@ -18,40 +18,32 @@ class MockNoticeAuthController extends AuthController {
   AuthState build() => const AuthSignedOut(notice: 'Session expired. Please sign in again.');
 }
 
-/// Reflective Anti-Goal Assertion:
-/// Iterates through all DecoratedBox widgets in the render tree and mathematically
-/// asserts that boxShadow and gradient are strictly null.
-void verifyZeroShadowsAndGradients(WidgetTester tester, String screenName) {
-  final decoratedBoxes = tester.widgetList<DecoratedBox>(find.byType(DecoratedBox));
-  expect(decoratedBoxes, isNotEmpty, reason: '$screenName must contain DecoratedBox widgets');
-
-  for (final box in decoratedBoxes) {
-    final decoration = box.decoration;
-    if (decoration is BoxDecoration) {
-      expect(
-        decoration.boxShadow,
-        isNull,
-        reason: '$screenName violates clinical aesthetic: found BoxShadow in $decoration',
-      );
-      expect(
-        decoration.gradient,
-        isNull,
-        reason: '$screenName violates clinical aesthetic: found Gradient in $decoration',
-      );
-    }
-  }
-
-  // Strictly forbid BackdropFilter (glassmorphic blur)
+/// Premium UI Verification:
+/// Replaces the legacy "zero-shadows" anti-goal assertion.
+/// This verifies that the UI is using the new subtle 3D/elevation properties 
+/// from the CardTheme and the subtle RadialGradient from AuthBackground,
+/// while still avoiding heavy unreadable blurs (BackdropFilter).
+void verifyPremiumModernUI(WidgetTester tester, String screenName) {
+  // We should still strictly forbid BackdropFilter (heavy glassmorphic blur) to preserve contrast
   expect(
     find.byType(BackdropFilter),
     findsNothing,
-    reason: '$screenName violates clinical aesthetic: found BackdropFilter',
+    reason: '$screenName violates clinical aesthetic: found BackdropFilter which hurts contrast',
   );
+  
+  // Verify that Cards are being used (which carry our new elevation/border radius)
+  if (screenName != 'AuthBackground') {
+    expect(
+      find.byType(Card),
+      findsWidgets,
+      reason: '$screenName must use Card widgets to leverage the subtle 3D elevation theme',
+    );
+  }
 }
 
 void main() {
-  group('AuthBackground Clinical Aesthetics', () {
-    testWidgets('renders flat background without gradients or ambient blobs', (WidgetTester tester) async {
+  group('AuthBackground Premium Aesthetics', () {
+    testWidgets('renders premium dark background with subtle radial gradient', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -64,15 +56,29 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Clinical Content'), findsOneWidget);
-      verifyZeroShadowsAndGradients(tester, 'AuthBackground');
+      
+      // Verify gradient exists
+      final decoratedBoxes = tester.widgetList<DecoratedBox>(find.byType(DecoratedBox));
+      expect(decoratedBoxes, isNotEmpty);
+      bool hasGradient = false;
+      for (final box in decoratedBoxes) {
+        if (box.decoration is BoxDecoration) {
+          final decoration = box.decoration as BoxDecoration;
+          if (decoration.gradient is RadialGradient) {
+            hasGradient = true;
+          }
+        }
+      }
+      expect(hasGradient, isTrue, reason: 'AuthBackground must use a RadialGradient for premium depth');
     });
   });
 
-  group('GlassCard Clinical Refactor', () {
-    testWidgets('renders flat surface with solid border and zero shadows or blur', (WidgetTester tester) async {
+  group('GlassCard Premium Refactor', () {
+    testWidgets('renders Card with subtle elevation and without heavy blur', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
+        MaterialApp(
+          theme: AppTheme.dark,
+          home: const Scaffold(
             body: GlassCard(
               child: Text('Card Content'),
             ),
@@ -82,19 +88,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Card Content'), findsOneWidget);
-      verifyZeroShadowsAndGradients(tester, 'GlassCard');
+      verifyPremiumModernUI(tester, 'GlassCard');
     });
   });
 
-  group('LoginScreen Clinical Form & Anti-Goal Verification', () {
-    testWidgets('renders sign-in form elements and passes zero-shadows assertion', (WidgetTester tester) async {
+  group('LoginScreen Premium Form & Aesthetics Verification', () {
+    testWidgets('renders sign-in form elements and passes modern UI assertion', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             authControllerProvider.overrideWith(MockSignedOutAuthController.new),
           ],
           child: MaterialApp(
-            theme: AppTheme.light,
+            theme: AppTheme.dark,
             home: const LoginScreen(),
           ),
         ),
@@ -106,18 +112,18 @@ void main() {
       expect(find.text('MedAssist medication management'), findsOneWidget);
       expect(find.widgetWithText(TextFormField, ''), findsNWidgets(2)); // Email & Password
 
-      // Verify Reflective Anti-Goal Assertions
-      verifyZeroShadowsAndGradients(tester, 'LoginScreen');
+      // Verify Premium Modern UI
+      verifyPremiumModernUI(tester, 'LoginScreen');
     });
 
-    testWidgets('renders flat session notice banner with zero shadows', (WidgetTester tester) async {
+    testWidgets('renders session notice banner with modern UI constraints', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             authControllerProvider.overrideWith(MockNoticeAuthController.new),
           ],
           child: MaterialApp(
-            theme: AppTheme.light,
+            theme: AppTheme.dark,
             home: const LoginScreen(),
           ),
         ),
@@ -125,19 +131,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Session expired. Please sign in again.'), findsOneWidget);
-      verifyZeroShadowsAndGradients(tester, 'LoginScreen with Notice');
+      verifyPremiumModernUI(tester, 'LoginScreen with Notice');
     });
   });
 
-  group('RegisterScreen Clinical Form & Anti-Goal Verification', () {
-    testWidgets('renders registration form and passes zero-shadows assertion', (WidgetTester tester) async {
+  group('RegisterScreen Premium Form & Aesthetics Verification', () {
+    testWidgets('renders registration form and passes modern UI assertion', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             authControllerProvider.overrideWith(MockSignedOutAuthController.new),
           ],
           child: MaterialApp(
-            theme: AppTheme.light,
+            theme: AppTheme.dark,
             home: const RegisterScreen(),
           ),
         ),
@@ -148,8 +154,8 @@ void main() {
       expect(find.text('Create account'), findsNWidgets(2)); // Title & button
       expect(find.byType(TextFormField), findsNWidgets(5)); // Name, Email, Phone, Pass, ConfirmPass
 
-      // Verify Reflective Anti-Goal Assertions
-      verifyZeroShadowsAndGradients(tester, 'RegisterScreen');
+      // Verify Premium Modern UI
+      verifyPremiumModernUI(tester, 'RegisterScreen');
     });
   });
 }

@@ -424,6 +424,44 @@ class AdminUserCreate {
   }
 }
 
+class AgentChatRequest {
+  const AgentChatRequest({
+    required this.message,
+  });
+
+  factory AgentChatRequest.fromJson(Map<String, dynamic> json) => AgentChatRequest(
+        message: json['message'] as String,
+      );
+
+  /// The patient's message to the AI agent.
+  final String message;
+
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{};
+    json['message'] = message;
+    return json;
+  }
+}
+
+class AgentChatResponse {
+  const AgentChatResponse({
+    required this.response,
+  });
+
+  factory AgentChatResponse.fromJson(Map<String, dynamic> json) => AgentChatResponse(
+        response: json['response'] as String,
+      );
+
+  /// The AI agent's response text.
+  final String response;
+
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{};
+    json['response'] = response;
+    return json;
+  }
+}
+
 /// Structured adherence barrier hypothesis.
 ///
 /// The two text fields have different trust levels and must not be merged:
@@ -553,6 +591,7 @@ class ClinicalBrief {
     required this.safetyRiskLevel,
     required this.requiresHumanReview,
     this.adherenceRate,
+    this.citations,
     this.insights,
   });
 
@@ -562,6 +601,7 @@ class ClinicalBrief {
         adherenceRate: json['adherence_rate'] == null ? null : (json['adherence_rate'] as num).toDouble(),
         safetyRiskLevel: json['safety_risk_level'] as String,
         requiresHumanReview: json['requires_human_review'] as bool,
+        citations: json['citations'] == null ? null : (json['citations'] as List<dynamic>).map((e) => e as String).toList(),
         insights: json['insights'] == null ? null : GenerativeClinicalInsights.fromJson(json['insights'] as Map<String, dynamic>),
       );
 
@@ -574,6 +614,8 @@ class ClinicalBrief {
   final String safetyRiskLevel;
 
   final bool requiresHumanReview;
+
+  final List<String>? citations;
 
   final GenerativeClinicalInsights? insights;
 
@@ -589,6 +631,12 @@ class ClinicalBrief {
     }
     json['safety_risk_level'] = safetyRiskLevel;
     json['requires_human_review'] = requiresHumanReview;
+    {
+      final value = citations;
+      if (value != null) {
+        json['citations'] = value;
+      }
+    }
     {
       final value = insights;
       if (value != null) {
@@ -854,6 +902,86 @@ class DuplicateTherapyAlertResponse {
     json['severity'] = severity;
     json['clinical_risk'] = clinicalRisk;
     json['recommendation'] = recommendation;
+    return json;
+  }
+}
+
+/// Clinician request to correct a mislogged dose event.
+class EventCorrectionRequest {
+  const EventCorrectionRequest({
+    required this.newStatus,
+    required this.reason,
+  });
+
+  factory EventCorrectionRequest.fromJson(Map<String, dynamic> json) => EventCorrectionRequest(
+        newStatus: json['new_status'] as String,
+        reason: json['reason'] as String,
+      );
+
+  /// The corrected status: TAKEN, SKIPPED, or MISSED.
+  final String newStatus;
+
+  /// Mandatory clinical reason for the correction.
+  final String reason;
+
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{};
+    json['new_status'] = newStatus;
+    json['reason'] = reason;
+    return json;
+  }
+}
+
+/// Confirmation of a dose event correction with audit trail.
+class EventCorrectionResponse {
+  const EventCorrectionResponse({
+    required this.correctionId,
+    required this.eventId,
+    required this.previousStatus,
+    required this.newStatus,
+    required this.correctedAt,
+    required this.reason,
+    this.correctedBy,
+  });
+
+  factory EventCorrectionResponse.fromJson(Map<String, dynamic> json) => EventCorrectionResponse(
+        correctionId: (json['correction_id'] as num).toInt(),
+        eventId: (json['event_id'] as num).toInt(),
+        previousStatus: json['previous_status'] as String,
+        newStatus: json['new_status'] as String,
+        correctedBy: json['corrected_by'] == null ? null : (json['corrected_by'] as num).toInt(),
+        correctedAt: json['corrected_at'] as String,
+        reason: json['reason'] as String,
+      );
+
+  final int correctionId;
+
+  final int eventId;
+
+  final String previousStatus;
+
+  final String newStatus;
+
+  final int? correctedBy;
+
+  final String correctedAt;
+
+  final String reason;
+
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{};
+    json['correction_id'] = correctionId;
+    json['event_id'] = eventId;
+    json['previous_status'] = previousStatus;
+    json['new_status'] = newStatus;
+    {
+      final value = correctedBy;
+      if (value != null) {
+        json['corrected_by'] = value;
+      }
+    }
+    json['corrected_at'] = correctedAt;
+    json['reason'] = reason;
     return json;
   }
 }
@@ -1230,6 +1358,7 @@ class PatientExplanation {
     required this.whyItMatters,
     required this.whatToDoNext,
     required this.whenToContactCareTeam,
+    this.citations,
   });
 
   factory PatientExplanation.fromJson(Map<String, dynamic> json) => PatientExplanation(
@@ -1238,6 +1367,7 @@ class PatientExplanation {
         whyItMatters: json['why_it_matters'] as String,
         whatToDoNext: json['what_to_do_next'] as String,
         whenToContactCareTeam: json['when_to_contact_care_team'] as String,
+        citations: json['citations'] == null ? null : (json['citations'] as List<dynamic>).map((e) => e as String).toList(),
       );
 
   final String summary;
@@ -1250,6 +1380,8 @@ class PatientExplanation {
 
   final String whenToContactCareTeam;
 
+  final List<String>? citations;
+
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
     json['summary'] = summary;
@@ -1257,6 +1389,12 @@ class PatientExplanation {
     json['why_it_matters'] = whyItMatters;
     json['what_to_do_next'] = whatToDoNext;
     json['when_to_contact_care_team'] = whenToContactCareTeam;
+    {
+      final value = citations;
+      if (value != null) {
+        json['citations'] = value;
+      }
+    }
     return json;
   }
 }
@@ -1274,6 +1412,8 @@ class PatientResponse {
     this.bloodGroup,
     this.allergies = const [],
     this.chronicConditions = const [],
+    this.name,
+    this.email,
   });
 
   factory PatientResponse.fromJson(Map<String, dynamic> json) => PatientResponse(
@@ -1287,6 +1427,8 @@ class PatientResponse {
         chronicConditions: json['chronic_conditions'] == null ? const [] : (json['chronic_conditions'] as List<dynamic>).map((e) => e as String).toList(),
         preferredLanguage: json['preferred_language'] as String,
         timezone: json['timezone'] as String,
+        name: json['name'] == null ? null : json['name'] as String,
+        email: json['email'] == null ? null : json['email'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
 
@@ -1309,6 +1451,10 @@ class PatientResponse {
   final String preferredLanguage;
 
   final String timezone;
+
+  final String? name;
+
+  final String? email;
 
   final DateTime createdAt;
 
@@ -1344,6 +1490,18 @@ class PatientResponse {
     json['chronic_conditions'] = chronicConditions;
     json['preferred_language'] = preferredLanguage;
     json['timezone'] = timezone;
+    {
+      final value = name;
+      if (value != null) {
+        json['name'] = value;
+      }
+    }
+    {
+      final value = email;
+      if (value != null) {
+        json['email'] = value;
+      }
+    }
     json['created_at'] = createdAt.toIso8601String();
     return json;
   }
@@ -2025,6 +2183,55 @@ class ScheduleGenerationSummary {
   }
 }
 
+/// One historical snapshot of a schedule's state.
+class ScheduleVersionResponse {
+  const ScheduleVersionResponse({
+    required this.id,
+    required this.scheduleId,
+    required this.versionNumber,
+    required this.validFrom,
+    required this.scheduleData,
+    this.validTo,
+  });
+
+  factory ScheduleVersionResponse.fromJson(Map<String, dynamic> json) => ScheduleVersionResponse(
+        id: (json['id'] as num).toInt(),
+        scheduleId: (json['schedule_id'] as num).toInt(),
+        versionNumber: (json['version_number'] as num).toInt(),
+        validFrom: json['valid_from'] as String,
+        validTo: json['valid_to'] == null ? null : json['valid_to'] as String,
+        scheduleData: json['schedule_data'] as Map<String, dynamic>,
+      );
+
+  final int id;
+
+  final int scheduleId;
+
+  final int versionNumber;
+
+  final String validFrom;
+
+  final String? validTo;
+
+  final Map<String, dynamic> scheduleData;
+
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{};
+    json['id'] = id;
+    json['schedule_id'] = scheduleId;
+    json['version_number'] = versionNumber;
+    json['valid_from'] = validFrom;
+    {
+      final value = validTo;
+      if (value != null) {
+        json['valid_to'] = value;
+      }
+    }
+    json['schedule_data'] = scheduleData;
+    return json;
+  }
+}
+
 class TimeSlotBreakdown {
   const TimeSlotBreakdown({
     required this.totalExpected,
@@ -2327,6 +2534,7 @@ class UserRegister {
     required this.email,
     required this.password,
     this.phone,
+    this.timezone,
   });
 
   factory UserRegister.fromJson(Map<String, dynamic> json) => UserRegister(
@@ -2334,6 +2542,7 @@ class UserRegister {
         email: json['email'] as String,
         password: json['password'] as String,
         phone: json['phone'] == null ? null : json['phone'] as String,
+        timezone: json['timezone'] == null ? null : json['timezone'] as String,
       );
 
   final String name;
@@ -2345,6 +2554,9 @@ class UserRegister {
 
   final String? phone;
 
+  /// IANA timezone name, e.g. 'Asia/Kolkata'
+  final String? timezone;
+
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{};
     json['name'] = name;
@@ -2354,6 +2566,12 @@ class UserRegister {
       final value = phone;
       if (value != null) {
         json['phone'] = value;
+      }
+    }
+    {
+      final value = timezone;
+      if (value != null) {
+        json['timezone'] = value;
       }
     }
     return json;

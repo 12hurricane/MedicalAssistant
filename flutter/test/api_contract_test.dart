@@ -20,6 +20,9 @@
 //      cosmetic one: the generated models come from this document, so a role field
 //      here becomes a settable field on the client and, eventually, a sent one.
 
+@TestOn('vm')
+library;
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -32,7 +35,7 @@ import 'package:medassist/shared/skip_reason_labels.dart';
 
 // Not a `package:` import: the generator lives in `tool/`, outside `lib/`, because it
 // is a build-time script and must never be reachable from application code.
-import '../tool/generate_api_models.dart' show generate;
+import 'dummy_stub.dart' if (dart.library.io) '../tool/generate_api_models.dart' show generate;
 
 const String _specRelative = '../backend/openapi.json';
 const String _generatedRelative = 'lib/core/api/generated/api_models.dart';

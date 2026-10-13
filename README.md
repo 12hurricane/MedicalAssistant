@@ -126,3 +126,11 @@ With the backend running: http://localhost:8000/docs
 ├── flutter/              # Flutter app
 └── docker-compose.yml
 ```
+
+## Demo Day Checklist
+- [ ] Run `docker-compose build` the night before (never the morning of)
+- [ ] Run `docker-compose up -d` on demo day
+- [ ] Check `docker-compose logs seed-job` exits 0
+- [ ] Open localhost:8080, log in, confirm escalation visible
+- [ ] Have BUG_REPORT.md open on a second tab
+- [ ] Have the architecture diagram ready to show

@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_typography.dart';
 import '../../../../core/api/generated/api_models.dart';
+import '../../../../widgets/organ_impact_viewer.dart';
+import '../state/safety_assessment_provider.dart';
 
-class FindingPresentView extends StatefulWidget {
+class FindingPresentView extends ConsumerStatefulWidget {
   const FindingPresentView({super.key, required this.analysis});
 
   final AdherenceAnalysisResult analysis;
 
   @override
-  State<FindingPresentView> createState() => _FindingPresentViewState();
+  ConsumerState<FindingPresentView> createState() => _FindingPresentViewState();
 }
 
-class _FindingPresentViewState extends State<FindingPresentView> {
+class _FindingPresentViewState extends ConsumerState<FindingPresentView> {
   bool _showMonograph = false;
-  bool _simulateAiOffline = false;
 
   @override
   Widget build(BuildContext context) {
@@ -44,21 +47,27 @@ class _FindingPresentViewState extends State<FindingPresentView> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.priority_high, color: const Color(0xFFBA1A1A), size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                '1 Critical Finding Requires Triage',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
-                  color: AppColors.textPrimary,
+          Flexible(
+            child: Row(
+              children: [
+                const Icon(Icons.priority_high, color: Color(0xFFBA1A1A), size: 20),
+                const SizedBox(width: 8),
+                const Flexible(
+                  child: Text(
+                    '1 Critical Finding Requires Triage',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
@@ -72,7 +81,7 @@ class _FindingPresentViewState extends State<FindingPresentView> {
                 fontFamily: 'JetBrains Mono',
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFFBA1A1A),
+                color: Color(0xFFBA1A1A),
               ),
             ),
           ),
@@ -102,29 +111,36 @@ class _FindingPresentViewState extends State<FindingPresentView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0x99881337),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0x99F43F5E)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.shield, color: Color(0xFFFECDD3), size: 14),
-                    const SizedBox(width: 4),
-                    const Text(
-                      '[TIER 1] DETERMINISTIC SAFETY FINDING',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                        color: Color(0xFFFECDD3),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0x99881337),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0x99F43F5E)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.shield, color: Color(0xFFFECDD3), size: 14),
+                      SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          '[TIER 1] DETERMINISTIC SAFETY FINDING',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                            color: Color(0xFFFECDD3),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Text(
                 'CRITICALITY: ${widget.analysis.safetyRiskLevel.toUpperCase()}',
                 style: TextStyle(
@@ -139,11 +155,11 @@ class _FindingPresentViewState extends State<FindingPresentView> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.report_problem, color: const Color(0xFFBA1A1A), size: 20),
+              const Icon(Icons.report_problem, color: Color(0xFFBA1A1A), size: 20),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Drug-Drug Interaction Risk Detected: Fluconazole + Atorvastatin',
+                  'Deterministic Safety Finding',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -164,14 +180,17 @@ class _FindingPresentViewState extends State<FindingPresentView> {
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: const Color(0x66F43F5E)),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.assignment_ind, color: const Color(0xFFBA1A1A), size: 16),
-                    const SizedBox(width: 4),
-                    const Text(
-                      'Human Review Required: Flagged to Dr. Sarah Lin',
-                      style: TextStyle(fontSize: 12, color: Color(0xE6FECDD3)),
+                    Icon(Icons.assignment_ind, color: Color(0xFFBA1A1A), size: 16),
+                    SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'Human Review Required: Flagged for Clinician Review',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: Color(0xE6FECDD3)),
+                      ),
                     ),
                   ],
                 ),
@@ -186,85 +205,18 @@ class _FindingPresentViewState extends State<FindingPresentView> {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0x33F43F5E)),
             ),
-            child: Text.rich(
-              TextSpan(
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: Color(0xF2FECDD3), // /95
-                ),
-                children: [
-                  const TextSpan(
-                    text: 'Co-administration may increase plasma concentrations of HMG-CoA reductase inhibitor (Atorvastatin) through potent inhibition of CYP3A4-mediated hepatic clearance.\n',
-                  ),
-                  TextSpan(
-                    text: widget.analysis.recommendedAction,
-                    style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFFECDD3)),
-                  ),
-                ],
+            child: Text(
+              widget.analysis.recommendedAction,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: Color(0xFFFECDD3),
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceMuted.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'SUBSTRATE (DRUG A)',
-                        style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
-                      ),
-                      const Text(
-                        'Atorvastatin 20mg',
-                        style: TextStyle(fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-                      ),
-                      const Text(
-                        'Oral Tablet (Daily PM)',
-                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceMuted.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'INHIBITOR (DRUG B)',
-                        style: TextStyle(fontSize: 10, color: AppColors.textSecondary),
-                      ),
-                      const Text(
-                        'Fluconazole 150mg',
-                        style: TextStyle(fontFamily: 'JetBrains Mono', fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFFBA1A1A)),
-                      ),
-                      const Text(
-                        'Oral Capsule (New Rx)',
-                        style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
+
           const SizedBox(height: 16),
           Row(
             children: [
@@ -295,6 +247,38 @@ class _FindingPresentViewState extends State<FindingPresentView> {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final patientId = widget.analysis.patientId;
+                try {
+                  final assessment = await ref.read(safetyAssessmentProvider(patientId).future);
+                  if (!mounted) return;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => OrganImpactViewerScreen(assessment: assessment),
+                    ),
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to load safety assessment: $e')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.view_in_ar_rounded, size: 18),
+              label: const Text('View Spatial Impact', style: TextStyle(fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF6366F1),
+                backgroundColor: const Color(0x0D6366F1),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                side: const BorderSide(color: Color(0x806366F1)),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -314,57 +298,90 @@ class _FindingPresentViewState extends State<FindingPresentView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E1B4B),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0x666366F1)),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1B4B),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0x666366F1)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.menu_book, color: Color(0xFFC7D2FE), size: 14),
+                      SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          '[TIER 2] VERIFIED CLINICAL EVIDENCE',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                            color: Color(0xFFC7D2FE),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ),
+              const SizedBox(width: 8),
+              if (widget.analysis.clinicalBrief.citations?.isNotEmpty == true)
+                Text(
+                  'CITATIONS: ${widget.analysis.clinicalBrief.citations!.length}',
+                  style: const TextStyle(
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 11,
+                    color: Color(0xFFC7D2FE),
+                  ),
+                )
+              else
+                const Text(
+                  'NO CITATIONS',
+                  style: TextStyle(
+                    fontFamily: 'JetBrains Mono',
+                    fontSize: 11,
+                    color: Color(0x80C7D2FE),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (widget.analysis.clinicalBrief.citations?.isNotEmpty == true)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: widget.analysis.clinicalBrief.citations!.map((c) => Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.menu_book, color: Color(0xFFC7D2FE), size: 14),
-                    const SizedBox(width: 4),
-                    const Text(
-                      '[TIER 2] VERIFIED CLINICAL EVIDENCE',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                        color: Color(0xFFC7D2FE),
+                    const Icon(Icons.menu_book, size: 14, color: Color(0xFF818CF8)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        c,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: Color(0xFFC7D2FE),
+                        ),
                       ),
                     ),
                   ],
                 ),
+              )).toList(),
+            )
+          else
+            const Text(
+              'Deterministic finding triggered by invariant check. No document-backed RAG citations provided.',
+              style: TextStyle(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+                color: Color(0x80C7D2FE),
               ),
-              const Text(
-                'Ref: CP-GUIDE-2023-REV2',
-                style: TextStyle(
-                  fontFamily: 'JetBrains Mono',
-                  fontSize: 11,
-                  color: Color(0xFFC7D2FE),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Source: Clinical Pharmacology Formulary Guideline Sec. 4.8',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFFE0E7FF),
             ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            '“Concurrent administration with CYP3A4 inhibitors is documented to elevate statin AUC by 2.5x to 4x, significantly increasing rhabdomyolysis and myopathy index risk.”',
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: Color(0xFFC7D2FE),
-            ),
-          ),
           const SizedBox(height: 12),
           Container(
             decoration: const BoxDecoration(
@@ -457,103 +474,190 @@ class _FindingPresentViewState extends State<FindingPresentView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xB33B0764),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0x80A855F7)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.auto_awesome, color: Color(0xFFE9D5FF), size: 14),
-                    const SizedBox(width: 4),
-                    const Text(
-                      '[TIER 3] AI-ASSISTED SUMMARY (NON-DETERMINISTIC)',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                        color: Color(0xFFE9D5FF),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xB33B0764),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0x80A855F7)),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome, color: Color(0xFFE9D5FF), size: 14),
+                      SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          '[TIER 3] AI-ASSISTED SUMMARY (NON-DETERMINISTIC)',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                            color: Color(0xFFE9D5FF),
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              const Icon(Icons.arrow_back_ios_new, color: const Color(0xFF842BD2), size: 18),
+              const SizedBox(width: 8),
+              const Icon(Icons.arrow_back_ios_new, color: Color(0xFF842BD2), size: 18),
             ],
           ),
           const SizedBox(height: 12),
-          if (_simulateAiOffline)
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceVariant,
-                border: Border.all(color: AppColors.border),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
+          Text.rich(
+              TextSpan(
                 children: [
-                  const Icon(Icons.cloud_off, color: AppColors.textSecondary, size: 16),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'AI Summary Unavailable — Service offline or low confidence score. Showing authoritative deterministic findings only.',
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  const TextSpan(
+                    text: 'Patient-friendly summary: ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                      color: Color(0xFFD8B4FE),
+                    ),
+                  ),
+                  TextSpan(
+                    text: widget.analysis.patientExplanation.summary,
+                    style: AppTypography.narrative.copyWith(
+                      color: const Color(0xFFF3E8FF),
                     ),
                   ),
                 ],
               ),
-            )
-          else ...[
-            Text.rich(
-              TextSpan(
-                style: const TextStyle(fontSize: 14, height: 1.5, color: Color(0xFFF3E8FF)),
-                children: [
-                  const TextSpan(text: 'Patient-friendly summary: ', style: TextStyle(fontWeight: FontWeight.w600, color: const Color(0xFF842BD2))),
-                  TextSpan(text: widget.analysis.patientExplanation.summary),
-                ],
-              ),
             ),
+            if (widget.analysis.clinicalBrief.insights != null) ...[
+              const SizedBox(height: 12),
+              if (widget.analysis.clinicalBrief.insights!.trend != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceMuted,
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0x33A855F7)),
+                    ),
+                    child: Text(
+                      'Trend: ${widget.analysis.clinicalBrief.insights!.trend}',
+                      style: const TextStyle(
+                        fontFamily: 'JetBrains Mono',
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFFD8B4FE),
+                      ),
+                    ),
+                  ),
+                ),
+              if (widget.analysis.clinicalBrief.insights!.concerningPatterns?.isNotEmpty == true) ...[
+                const Text(
+                  'CONCERNING PATTERNS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: Color(0xFFD8B4FE),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ...widget.analysis.clinicalBrief.insights!.concerningPatterns!.map(
+                  (pattern) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ',
+                            style: TextStyle(
+                                color: Color(0xFFA855F7), fontSize: 14)),
+                        Expanded(
+                          child: Text(
+                            pattern,
+                            style: AppTypography.narrative.copyWith(
+                              fontSize: 13,
+                              color: const Color(0xFFF3E8FF),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+              if (widget.analysis.clinicalBrief.insights!.possibleBarriers?.isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  'POSSIBLE BARRIERS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: Color(0xFFD8B4FE),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ...widget.analysis.clinicalBrief.insights!.possibleBarriers!.map(
+                  (barrier) => Container(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceMuted.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          barrier.category.name.toUpperCase(),
+                          style: const TextStyle(
+                            fontFamily: 'JetBrains Mono',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFFA855F7),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            barrier.observedPattern,
+                            style: AppTypography.narrative.copyWith(
+                              fontSize: 12,
+                              color: const Color(0xFFE9D5FF),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
             const SizedBox(height: 6),
             Row(
               children: [
                 const Icon(Icons.info_outline, color: Color(0xCCD8B4FE), size: 13),
                 const SizedBox(width: 4),
-                const Text(
-                  'Generated via MedAssist Clinical LLM — Always verify with clinician.',
-                  style: TextStyle(fontSize: 11, color: Color(0xCCD8B4FE)),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.only(top: 8),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: Color(0x33A855F7))),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'LLM Confidence: 94.2%',
-                  style: TextStyle(fontSize: 10, letterSpacing: 0.5, color: Color(0xFFD8B4FE)),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() => _simulateAiOffline = !_simulateAiOffline),
+                const Expanded(
                   child: Text(
-                    _simulateAiOffline ? 'Restore AI Service' : 'Simulate AI Unavailable',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: const Color(0xFF842BD2),
-                      decoration: TextDecoration.underline,
-                    ),
+                    'Generated via MedAssist Clinical LLM — Always verify with clinician.',
+                    style: TextStyle(fontSize: 11, color: Color(0xCCD8B4FE)),
                   ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.only(top: 8),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: Color(0x33A855F7))),
+              ),
+              child: const Text(
+                'LLM Confidence: Generated via Medical Safety Agent',
+                style: TextStyle(fontSize: 10, letterSpacing: 0.5, color: Color(0xFFD8B4FE)),
+              ),
+            ),
         ],
       ),
     );
@@ -576,15 +680,18 @@ class _FindingPresentViewState extends State<FindingPresentView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'PATIENT-REPORTED CONTEXT',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                  color: AppColors.textSecondary,
+              const Expanded(
+                child: Text(
+                  'PATIENT-REPORTED CONTEXT',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
@@ -592,11 +699,12 @@ class _FindingPresentViewState extends State<FindingPresentView> {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFF10B981)),
                 ),
-                child: Row(
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 12),
-                    const SizedBox(width: 4),
-                    const Text(
+                    Icon(Icons.check_circle, color: Color(0xFF34D399), size: 12),
+                    SizedBox(width: 4),
+                    Text(
                       'Confidence: Observed (Self-reported)',
                       style: TextStyle(
                         fontSize: 10,
@@ -617,7 +725,7 @@ class _FindingPresentViewState extends State<FindingPresentView> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  barrier != null ? '${barrier.category.name} — ${barrier.observedPattern}' : 'Side Effects — Reported nausea following previous evening dose',
+                  barrier != null ? '${barrier.category.name} — ${barrier.observedPattern}' : 'Patient-reported context recorded during session',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,

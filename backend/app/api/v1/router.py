@@ -7,15 +7,13 @@ from app.api.v1.endpoints import (
     patients,
     prescriptions,
     schedules,
+    agent,
 )
 
 api_router = APIRouter()
 
 from app.core.config import settings
 
-@api_router.get("/health")
-async def health_check():
-    return {"status": "ok", "version": settings.VERSION}
 
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
@@ -24,3 +22,4 @@ api_router.include_router(medications.router, prefix="/medications", tags=["medi
 api_router.include_router(prescriptions.router, prefix="/prescriptions", tags=["prescriptions"])
 api_router.include_router(schedules.router, prefix="/schedule", tags=["schedule"])
 api_router.include_router(adherence.router, prefix="/adherence", tags=["adherence"])
+api_router.include_router(agent.router, prefix="/agent", tags=["agent"])

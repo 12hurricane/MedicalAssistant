@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../../../core/api/api_exception.dart';
 import '../../../core/api/generated/api_models.dart';
@@ -110,11 +112,25 @@ class AuthController extends Notifier<AuthState> {
     required String password,
     String? phone,
   }) async {
+    String? timezone;
+    try {
+      if (!kIsWeb) {
+        final dynamic tz = await FlutterTimezone.getLocalTimezone();
+        timezone = tz.toString();
+      } else {
+        // web fallback since flutter_timezone doesn't support web by default 
+        timezone = DateTime.now().timeZoneName;
+      }
+    } catch (_) {
+      // Ignored
+    }
+
     final session = await ref.read(authRepositoryProvider).register(
           name: name,
           email: email,
           password: password,
           phone: phone,
+          timezone: timezone,
         );
     state = AuthSignedIn(session);
   }

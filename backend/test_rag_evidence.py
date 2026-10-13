@@ -174,8 +174,8 @@ def test_every_corpus_chunk_carries_version_and_date_provenance():
     Drug labelling changes. A citation without a version and date cannot be audited
     later, and cannot be recognised as stale.
     """
-    chunks = build_corpus_chunks()
-    assert chunks, "the clinical corpus is empty"
+    chunks = build_corpus_chunks(include_extended=True)
+    assert len(chunks) >= 13, f"expected at least 13 chunks with extended set, got {len(chunks)}"
 
     missing_version = [c.chunk_id for c in chunks if not c.version]
     assert not missing_version, f"chunks with no version tag: {missing_version}"
@@ -305,3 +305,112 @@ def test_within_entity_true_positive_is_accepted(retriever):
     assert result.has_sufficient_evidence is True, (
         "Legitimate short query was rejected; non-entity threshold may be too tight."
     )
+def test_missing_medication_fails_closed(retriever):
+    """
+    A query for a medication that is missing/unknown must not fall back to an unfiltered search
+    that returns evidence for a completely unrelated drug (e.g. warfarin).
+    """
+    alert = ContraindicationAlert(
+        medication="Ibuprofen", # Assuming ibuprofen does not have a dedicated chunk, or is not contraindicated here
+        contraindication_type="CONDITION",
+        trigger="Bleeding",
+        severity=ContraindicationSeverity.CONTRAINDICATED,
+        clinical_risk="Risk of bleed",
+        recommendation="Avoid",
+    )
+    result = retriever.retrieve_for_contraindication(alert)
+    
+    assert not result.has_sufficient_evidence, "Fallback allowed unrelated evidence to be considered sufficient"
+    # Ensure no evidence is returned at all, since there's no fallback
+    if result.evidence:
+        assert all(c.drug_name.lower() == "ibuprofen" for c in result.evidence), "Unrelated evidence returned!"
+def test_relative_score_trap_does_not_force_weak_evidence(retriever):
+    """
+    Construct a case where all retrieved results have weak absolute scores but one is the highest.
+    Verify that highest_relative_score != automatically sufficient, and the weak evidence is cleared
+    so it does not leak into the bundle.
+    """
+    alert = MedicationInteractionAlert(
+        rule_id="INT-TEST-001",
+        drug_a="Metformin",
+        drug_b="Aspirin",  # assuming this pair has no strong interaction documented
+        severity=InteractionSeverity.MODERATE,
+        mechanism="Unknown",
+        clinical_effect="None",
+        recommendation="Monitor",
+        source="Test",
+        source_id="T1",
+        source_title="T1",
+        source_version="v1",
+        source_date="2024",
+    )
+    # Using a query that will have some lexical overlap with Metformin (to clear MIN_COVERAGE) 
+    # but fail SUFFICIENCY thresholds. Let's use a very generic, weakly related query.
+    # We can mock search to return intentionally weak results to be absolutely sure.
+    from unittest.mock import patch
+    from app.rag.retriever import RetrievedEvidenceChunk
+    
+    weak_chunk = RetrievedEvidenceChunk(
+        chunk_id="CHK-WEAK",
+        document_id="DOC1",
+        drug_name="Metformin",
+        source="Mock",
+        section="Mock",
+        text="Metformin is a drug.",
+        version="v1",
+        publication_date="2024-01-01",
+        relevance_score=0.99, # Artificially high relative score
+        lexical_score=0.25, # Passes MIN_COVERAGE (0.20) but fails SUFFICIENCY (0.30)
+        tfidf_cosine_score=0.10,
+        non_entity_lexical_score=0.10,
+        non_entity_tfidf_cosine_score=0.01,
+        semantic_score=None,
+        entity_verified=True,
+    )
+    
+    with patch.object(retriever, 'search', return_value=[weak_chunk]):
+        result = retriever.retrieve_for_interaction(alert)
+    
+    assert not result.has_sufficient_evidence, "Top relative score was wrongly accepted as sufficient!"
+    assert result.evidence == [], "Weak evidence was forced into the bundle instead of being cleared!"
+
+def test_weak_evidence_is_cleared(retriever):
+    """
+    Correct medication/entity but intentionally weak retrieval score -> sufficient = false.
+    """
+    alert = ContraindicationAlert(
+        medication="Metformin",
+        contraindication_type="CONDITION",
+        trigger="Mild headache",
+        severity=ContraindicationSeverity.MODERATE,
+        clinical_risk="None",
+        recommendation="Monitor",
+    )
+    from unittest.mock import patch
+    from app.rag.retriever import RetrievedEvidenceChunk
+    
+    # Explicitly constructed weak chunk that passes entity_verified but fails absolute scores
+    weak_chunk = RetrievedEvidenceChunk(
+        chunk_id="CHK-WEAK-CONTRA",
+        document_id="DOC1",
+        drug_name="Metformin",
+        source="Mock",
+        section="Mock",
+        text="Some weak evidence.",
+        version="v1",
+        publication_date="2024-01-01",
+        relevance_score=0.4,
+        lexical_score=0.1, # Fails SUFFICIENCY_MIN_COVERAGE
+        tfidf_cosine_score=0.01,
+        non_entity_lexical_score=0.01,
+        non_entity_tfidf_cosine_score=0.01,
+        semantic_score=None,
+        entity_verified=True,
+    )
+    
+    with patch.object(retriever, 'search', return_value=[weak_chunk]):
+        result = retriever.retrieve_for_contraindication(alert)
+        
+    assert not result.has_sufficient_evidence, "Weak evidence was wrongly accepted as sufficient"
+    assert result.evidence == [], "Evidence list was not cleared when sufficient=false"
+

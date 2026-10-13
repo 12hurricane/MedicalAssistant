@@ -1,9 +1,12 @@
 # Environment and secrets
 .env
+.env.*
+!.env*.example
 
-# Databases
+# Databases & Vector DB
 *.db
 *.db.bak-*
+chroma_data/
 
 # Python
 venv/
@@ -12,8 +15,26 @@ __pycache__/
 *.pyo
 *.pyd
 .pytest_cache/
+.coverage
+*.log
 
-# Build output
+# Build output & installers
 build/
 dist/
 *.egg-info/
+.dart_tool/
+DockerInstaller.exe
+
+# IDE & Editor configs
+.claude/
+.vscode/
+.idea/
+
+# Temporary run and evaluation logs
+analyze.txt
+backend/*_out.txt
+backend/*_output.txt
+backend/pytest_*.txt
+backend/walkthrough_*.txt
+backend/analysis_headers.txt
+backend/eval_results.txt

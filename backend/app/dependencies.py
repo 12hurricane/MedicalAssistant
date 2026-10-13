@@ -56,3 +56,57 @@ def require_role(*roles: str) -> Callable:
             )
         return current_user
     return role_checker
+
+from app.models.patient import Patient
+from app.models.clinician_patient_assignment import ClinicianPatientAssignment
+from fastapi import Path
+
+async def verify_patient_access(
+    patient_id: int,
+    current_user: User,
+    db: AsyncSession,
+) -> Patient:
+    """Verify that current_user has access to the specified patient_id, enforcing role and assignment."""
+    result = await db.execute(select(Patient).where(Patient.id == patient_id))
+    patient = result.scalar_one_or_none()
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    if current_user.role == 'ADMIN':
+        return patient
+
+    if current_user.role == 'PATIENT':
+        if patient.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Patients cannot access other patients' records")
+        return patient
+
+    if current_user.role == 'CLINICIAN':
+        assignment = await db.execute(
+            select(ClinicianPatientAssignment).where(
+                ClinicianPatientAssignment.clinician_id == current_user.id,
+                ClinicianPatientAssignment.patient_id == patient.id,
+            )
+        )
+        if not assignment.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="Not assigned to this patient")
+        return patient
+
+    raise HTTPException(status_code=403, detail="Not enough permissions")
+
+
+async def get_patient_with_access(
+    patient_id: int = Path(...),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Patient:
+    """Dependency to retrieve a patient and verify the current user has access to them."""
+    return await verify_patient_access(patient_id=patient_id, current_user=current_user, db=db)
+
+async def get_patient_for_clinician_or_admin(
+    patient_id: int = Path(...),
+    current_user: User = Depends(require_role('CLINICIAN', 'ADMIN')),
+    db: AsyncSession = Depends(get_db)
+) -> Patient:
+    """Dependency that requires CLINICIAN/ADMIN and checks assignment."""
+    return await get_patient_with_access(patient_id=patient_id, current_user=current_user, db=db)

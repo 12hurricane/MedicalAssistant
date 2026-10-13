@@ -1,126 +1,188 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_typography.dart';
+import '../../../core/api/api_endpoints.dart';
+import '../../../core/api/generated/api_models.dart';
+import '../../../core/providers.dart';
 import '../../auth/state/auth_controller.dart';
 import '../dashboard/widgets/patient_background.dart';
+import '../medications/state/today_schedule_controller.dart';
+
+/// Provider for the signed-in patient's full medical profile,
+/// including their stored IANA timezone.
+final currentPatientProfileProvider =
+    FutureProvider.autoDispose<PatientResponse>((ref) async {
+  final client = ref.watch(apiClientProvider);
+  return client.getObject(
+    ApiEndpoints.myPatientProfile,
+    decode: PatientResponse.fromJson,
+  );
+});
 
 /// The patient's profile/settings screen.
+///
+/// Follows the flat clinical design token system:
+/// - No glassmorphism or blur filters
+/// - Displays real patient timezone fetched from backend Patient profile
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(currentSessionProvider);
+    final profileAsync = ref.watch(currentPatientProfileProvider);
+    final scheduleAsync = ref.watch(todayScheduleProvider);
+
+    // Resolve timezone from PatientResponse, fallback to TodayScheduleResponse, or UTC
+    final timezone = profileAsync.valueOrNull?.timezone ??
+        scheduleAsync.valueOrNull?.timezone ??
+        (profileAsync.isLoading ? 'Detecting...' : 'UTC');
 
     return PatientBackground(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
         children: [
-        // Avatar + Name
-        Center(
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 44,
-                backgroundColor: AppColors.primaryLight,
-                child: Text(
-                  _initials(session?.displayName ?? '?'),
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
+          // Avatar + Name
+          Center(
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 44,
+                  backgroundColor: AppColors.primaryLight,
+                  child: Text(
+                    _initials(session?.displayName ?? '?'),
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                session?.displayName ?? 'Patient',
-                style: AppTypography.titleLarge,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                session?.user.email ?? '',
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+                const SizedBox(height: 14),
+                Text(
+                  session?.displayName ?? 'Patient',
+                  style: AppTypography.titleLarge.copyWith(color: AppColors.textOnPrimary),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  session?.user.role ?? 'patient',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.accent,
+                const SizedBox(height: 4),
+                Text(
+                  session?.user.email ?? '',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 32),
-
-        // Settings tiles
-        _SettingsTile(
-          icon: Icons.notifications_outlined,
-          title: 'Notifications',
-          subtitle: 'Dose reminders & alerts',
-          onTap: () {},
-        ),
-        _SettingsTile(
-          icon: Icons.schedule_outlined,
-          title: 'Timezone',
-          subtitle: 'UTC',
-          onTap: () {},
-        ),
-        _SettingsTile(
-          icon: Icons.security_outlined,
-          title: 'Privacy & Security',
-          subtitle: 'Account protection settings',
-          onTap: () {},
-        ),
-        _SettingsTile(
-          icon: Icons.help_outline,
-          title: 'Help & Support',
-          subtitle: 'FAQ, contact, report a bug',
-          onTap: () {},
-        ),
-
-        const SizedBox(height: 24),
-
-        // Sign Out
-        OutlinedButton.icon(
-          onPressed: () =>
-              ref.read(authControllerProvider.notifier).logout(),
-          icon: const Icon(Icons.logout_rounded, size: 18),
-          label: const Text('Sign Out'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.danger,
-            side: BorderSide(color: AppColors.danger.withValues(alpha: 0.3)),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    session?.user.role ?? 'patient',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accent,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
-    ));
+
+          const SizedBox(height: 32),
+
+          // Settings tiles
+          _SettingsTile(
+            icon: Icons.notifications_outlined,
+            title: 'Notifications',
+            subtitle: 'Dose reminders & alerts',
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (_) => AlertDialog(
+                  backgroundColor: AppColors.surface,
+                  title: const Text('Notifications', style: TextStyle(color: AppColors.textPrimary)),
+                  content: const Text(
+                    'Medication reminders are scheduled on mobile devices based on your prescription times.\n\nOn web, background notifications safely no-op.',
+                    style: TextStyle(color: AppColors.textSecondary),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          _SettingsTile(
+            icon: Icons.schedule_outlined,
+            title: 'Timezone',
+            subtitle: timezone,
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (_) => AlertDialog(
+                  backgroundColor: AppColors.surface,
+                  title: const Text('Timezone', style: TextStyle(color: AppColors.textPrimary)),
+                  content: Text(
+                    'Your active timezone is $timezone, captured during registration.\n\nDose schedules and push reminders are synchronized to this timezone.',
+                    style: const TextStyle(color: AppColors.textSecondary),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          _SettingsTile(
+            icon: Icons.security_outlined,
+            title: 'Privacy & Security',
+            subtitle: 'Account protection settings',
+            onTap: () {},
+          ),
+          _SettingsTile(
+            icon: Icons.help_outline,
+            title: 'Help & Support',
+            subtitle: 'FAQ, contact, report a bug',
+            onTap: () {},
+          ),
+
+          const SizedBox(height: 24),
+
+          // Sign Out
+          OutlinedButton.icon(
+            onPressed: () =>
+                ref.read(authControllerProvider.notifier).logout(),
+            icon: const Icon(Icons.logout_rounded, size: 18),
+            label: const Text('Sign Out'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.danger,
+              side: BorderSide(color: AppColors.danger.withValues(alpha: 0.3)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   static String _initials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
     if (parts.length == 1) return parts.first[0].toUpperCase();
-    return ''.toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
   }
 }
 
@@ -142,36 +204,30 @@ class _SettingsTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: AppColors.primary, size: 20),
-            ),
-            title: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
-            ),
-            subtitle: Text(
-              subtitle,
-              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textDisabled),
-            onTap: onTap,
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceMuted,
+            borderRadius: BorderRadius.circular(8),
           ),
+          child: Icon(icon, color: AppColors.primary, size: 20),
         ),
+        title: Text(
+          title,
+          style: AppTypography.titleMedium.copyWith(fontSize: 15),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textDisabled),
+        onTap: onTap,
       ),
     );
   }

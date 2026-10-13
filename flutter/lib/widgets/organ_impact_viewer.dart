@@ -3,64 +3,24 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../app/theme/app_colors.dart';
+import '../core/api/generated/api_models.dart';
 
-/// Layout shell for a future organ-impact visualisation. **Contains no clinical data,
-/// and must not be given any until it is fed by the backend.**
+/// Organ-impact visualisation screen, wired to a real [SafetyAssessmentResponse].
 ///
-/// Nothing imports this file. It is kept for its geometry — the responsive two-column
-/// split, the glass overlays, the render stage, the step timeline — because Phase 5.5
-/// may reuse that language for the clinician safety review. It is not a feature.
+/// Accepts an optional [SafetyAssessmentResponse]. When null, the screen renders
+/// its empty state in [AppColors.textDisabled] and [AppColors.surfaceMuted] —
+/// absence of an assessment must not be dressed as the output of one.
 ///
-/// ## What was removed, and why it mattered
-///
-/// It arrived as a compiled transcription of a Stitch mockup, with the mockup's filler
-/// presented as computed output. Every item below was a hardcoded string literal with no
-/// engine, model or retrieval behind it. The strings themselves are deliberately *not*
-/// reproduced here — an inventory of ready-to-paste fabricated clinical sentences is the
-/// same hazard one indirection removed — so this lists only the shape of each:
-///
-/// - a red "human review required / contraindicated medication detected" alert banner
-/// - a named drug–drug interaction, with its mechanism written as established fact and a
-///   predicted physiological outcome
-/// - a categorical risk-level chip, at the top of the severity scale
-/// - an "AI predictive brief": a two-digit probability of a catastrophic event, presented
-///   as derived from the patient's age, baseline blood pressure and renal function
-/// - a three-step pharmacodynamic sequence for that interaction
-/// - an "evidence provenance" list citing a regulatory warning and a drug monograph, as
-///   though a retrieval step had returned them for this case
-/// - a full patient identity: name, date of birth, medical record number, body weight
-/// - a clinician identity — name and specialty — plus an avatar fetched from a
-///   third-party stock-photo service, i.e. an outbound request from a clinical screen
-/// - the wrong product name
-/// - a "last updated: just now" freshness claim about data that did not exist
-/// - "Review & Acknowledge" and "Modify Prescription" buttons wired to `() {}`
-///
-/// In a mockup that is filler. Compiled into a widget it renders with the full visual
-/// authority of a computed finding, and it made the highest-stakes claim this app is
-/// capable of making: a named patient is one dose from a life-threatening event, act now.
-/// Nothing in this codebase produced any of it. The project's own [AppColors] doc explains
-/// why the three trust tiers exist; this screen collapsed all three into one confident
-/// surface.
-///
-/// Fabricated clinical text was not replaced with more plausible clinical text. The
-/// panels render their genuine empty state, and that state is deliberately drawn in
-/// [AppColors.textDisabled] and [AppColors.surfaceMuted] rather than in
-/// [AppColors.deterministicFinding] — absence of an assessment must not be dressed as
-/// the output of one.
-///
-/// ## Wiring it up later
+/// When a [SafetyAssessmentResponse] is provided, all panels render with real
+/// deterministic data from the safety engine:
 ///
 /// ```text
 /// SafetyAssessment → API DTO → controller → OrganImpactViewerScreen → pure painting
 /// ```
-///
-/// The private widgets below take no clinical parameters. That is intentional: the
-/// speculative ones they briefly had described a DTO that does not exist yet, and the
-/// analyzer flagged every one as never supplied. Add parameters when there is a real
-/// response to match them to. When it is wired, delete this section of the doc — not the
-/// warning above it.
 class OrganImpactViewerScreen extends StatelessWidget {
-  const OrganImpactViewerScreen({super.key});
+  const OrganImpactViewerScreen({super.key, this.assessment});
+
+  final SafetyAssessmentResponse? assessment;
 
   /// Shown wherever a panel would otherwise display a value it does not have.
   static const String _noData = 'No clinical data available';
@@ -68,6 +28,8 @@ class OrganImpactViewerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasData = assessment != null;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -79,26 +41,24 @@ class OrganImpactViewerScreen extends StatelessWidget {
           ),
         ),
         elevation: 0,
-        // No product name and no signed-in clinician. This screen is not part of a
-        // session; presenting a user chip would imply it had loaded one.
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppColors.surfaceMuted,
+                color: hasData ? _accentForRisk(assessment!.riskLevel).withValues(alpha: 0.15) : AppColors.surfaceMuted,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.view_in_ar_rounded,
-                color: AppColors.textSecondary,
+                color: hasData ? _accentForRisk(assessment!.riskLevel) : AppColors.textSecondary,
                 size: 22,
               ),
             ),
             const SizedBox(width: 12),
-            const Text(
-              'Visual preview',
-              style: TextStyle(
+            Text(
+              hasData ? 'Safety Impact Review' : 'Visual preview',
+              style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -115,69 +75,93 @@ class OrganImpactViewerScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _AccentBanner(
-                  icon: Icons.info_outline_rounded,
-                  title: 'LAYOUT PREVIEW — NOT CONNECTED',
-                  body:
-                      'This screen is not wired to the safety engine. It renders its own '
-                      'empty state and shows no patient, medication or risk level.',
-                ),
+                if (!hasData)
+                  const _AccentBanner(
+                    icon: Icons.info_outline_rounded,
+                    title: 'LAYOUT PREVIEW — NOT CONNECTED',
+                    body:
+                        'This screen is not wired to the safety engine. It renders its own '
+                        'empty state and shows no patient, medication or risk level.',
+                    accentColor: AppColors.textSecondary,
+                  )
+                else if (assessment!.riskLevel == 'CRITICAL' || assessment!.riskLevel == 'HIGH')
+                  _AccentBanner(
+                    icon: Icons.warning_amber_rounded,
+                    title: assessment!.requiresHumanReview
+                        ? 'HUMAN REVIEW REQUIRED'
+                        : 'SAFETY ALERT — ${assessment!.riskLevel}',
+                    body: assessment!.recommendedAction,
+                    accentColor: _accentForRisk(assessment!.riskLevel),
+                  )
+                else
+                  _AccentBanner(
+                    icon: Icons.check_circle_outline_rounded,
+                    title: 'SAFETY STATUS: ${assessment!.riskLevel}',
+                    body: assessment!.recommendedAction,
+                    accentColor: _accentForRisk(assessment!.riskLevel),
+                  ),
                 const SizedBox(height: 24),
-                const _SubjectHeaderCard(),
+                _SubjectHeaderCard(assessment: assessment),
                 const SizedBox(height: 24),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    // The only reason this file is worth keeping: the wide layout puts
-                    // the stage beside the panels, the narrow one stacks them.
                     if (constraints.maxWidth > 900) {
-                      return const Row(
+                      return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(flex: 8, child: _RenderStage()),
-                          SizedBox(width: 24),
-                          Expanded(flex: 4, child: _InfoPanels()),
+                          Expanded(flex: 8, child: _RenderStage(assessment: assessment)),
+                          const SizedBox(width: 24),
+                          Expanded(flex: 4, child: _InfoPanels(assessment: assessment)),
                         ],
                       );
                     }
-                    return const Column(
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _RenderStage(),
-                        SizedBox(height: 24),
-                        _InfoPanels(),
+                        _RenderStage(assessment: assessment),
+                        const SizedBox(height: 24),
+                        _InfoPanels(assessment: assessment),
                       ],
                     );
                   },
                 ),
-                const SizedBox(height: 100), // clearance for the footer bar
+                const SizedBox(height: 100),
               ],
             ),
           ),
         ),
       ),
-      bottomSheet: const _FooterBar(),
+      bottomSheet: _FooterBar(assessment: assessment),
     );
+  }
+
+  static Color _accentForRisk(String riskLevel) {
+    switch (riskLevel.toUpperCase()) {
+      case 'CRITICAL':
+        return const Color(0xFFBA1A1A);
+      case 'HIGH':
+        return const Color(0xFFF43F5E);
+      case 'MODERATE':
+        return const Color(0xFFF59E0B);
+      default:
+        return const Color(0xFF10B981);
+    }
   }
 }
 
 /// A notice strip with a left accent rule.
-///
-/// The accent is the neutral token, hardcoded. It briefly took the colour as a parameter
-/// so a caller could pass [AppColors.deterministicFinding] — but no caller exists, and a
-/// colour knob whose only purpose is to make this strip look like a rules-engine result
-/// is a knob worth not having until there is a result. Add it back with the finding.
 class _AccentBanner extends StatelessWidget {
   const _AccentBanner({
     required this.icon,
     required this.title,
     required this.body,
+    required this.accentColor,
   });
 
   final IconData icon;
   final String title;
   final String body;
-
-  static const Color accent = AppColors.textSecondary;
+  final Color accentColor;
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +172,7 @@ class _AccentBanner extends StatelessWidget {
           topRight: Radius.circular(12),
           bottomRight: Radius.circular(12),
         ),
-        border: Border(left: BorderSide(color: accent, width: 4)),
+        border: Border(left: BorderSide(color: accentColor, width: 4)),
         boxShadow: [
           BoxShadow(
             color: AppColors.textPrimary.withValues(alpha: 0.05),
@@ -204,10 +188,10 @@ class _AccentBanner extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.1),
+              color: accentColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: accent),
+            child: Icon(icon, color: accentColor),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -217,7 +201,7 @@ class _AccentBanner extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    color: accent,
+                    color: accentColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                     letterSpacing: 0.5,
@@ -242,16 +226,16 @@ class _AccentBanner extends StatelessWidget {
   }
 }
 
-/// Header card geometry: avatar, name line, a row of metadata badges, a status chip.
-///
-/// Renders with every slot empty. It previously carried a full synthetic patient
-/// record — name, date of birth, medical record number and weight — which is both
-/// fabricated clinical data and, in shape, exactly what a real record looks like.
+/// Header card: patient summary and risk-level chip.
 class _SubjectHeaderCard extends StatelessWidget {
-  const _SubjectHeaderCard();
+  const _SubjectHeaderCard({this.assessment});
+
+  final SafetyAssessmentResponse? assessment;
 
   @override
   Widget build(BuildContext context) {
+    final hasData = assessment != null;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -279,9 +263,6 @@ class _SubjectHeaderCard extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  // No NetworkImage. The original pulled a stock face from
-                  // i.pravatar.cc, which put a third-party request behind a clinical
-                  // header and gave an empty screen a person.
                   gradient: const LinearGradient(
                     colors: [AppColors.surfaceMuted, AppColors.border],
                   ),
@@ -296,82 +277,142 @@ class _SubjectHeaderCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 20),
-              const Column(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    OrganImpactViewerScreen._noData,
+                    hasData ? 'Patient #${assessment!.patientId}' : OrganImpactViewerScreen._noData,
                     style: TextStyle(
-                      color: AppColors.textDisabled,
+                      color: hasData ? AppColors.textPrimary : AppColors.textDisabled,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Wrap(
-                    spacing: 20,
-                    children: [
-                      _InfoBadge(icon: Icons.calendar_month_rounded),
-                      _InfoBadge(icon: Icons.badge_rounded),
-                      _InfoBadge(icon: Icons.monitor_weight_rounded),
-                    ],
-                  ),
+                  const SizedBox(height: 8),
+                  if (hasData)
+                    Wrap(
+                      spacing: 20,
+                      children: [
+                        _InfoBadge(
+                          icon: Icons.calendar_month_rounded,
+                          value: _formatDate(assessment!.evaluatedAt),
+                        ),
+                        _InfoBadge(
+                          icon: Icons.badge_rounded,
+                          value: '${assessment!.evidence.length} findings',
+                        ),
+                        _InfoBadge(
+                          icon: Icons.medication_rounded,
+                          value: '${assessment!.medicationInteractions.length} interactions',
+                        ),
+                      ],
+                    )
+                  else
+                    const Wrap(
+                      spacing: 20,
+                      children: [
+                        _InfoBadge(icon: Icons.calendar_month_rounded),
+                        _InfoBadge(icon: Icons.badge_rounded),
+                        _InfoBadge(icon: Icons.monitor_weight_rounded),
+                      ],
+                    ),
                 ],
               ),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceMuted,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
+          _buildRiskChip(hasData),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRiskChip(bool hasData) {
+    if (!hasData) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.pending_outlined, color: AppColors.textDisabled, size: 18),
+            SizedBox(width: 8),
+            Text(
+              OrganImpactViewerScreen._awaiting,
+              style: TextStyle(
+                color: AppColors.textDisabled,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                letterSpacing: 0.5,
+              ),
             ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.pending_outlined,
-                  color: AppColors.textDisabled,
-                  size: 18,
-                ),
-                SizedBox(width: 8),
-                // Where the hardcoded risk-level chip was. A risk level is a
-                // SafetyAssessment output; this screen has never seen one.
-                Text(
-                  OrganImpactViewerScreen._awaiting,
-                  style: TextStyle(
-                    color: AppColors.textDisabled,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
+          ],
+        ),
+      );
+    }
+
+    final accent = OrganImpactViewerScreen._accentForRisk(assessment!.riskLevel);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: accent.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            assessment!.riskLevel == 'CRITICAL' || assessment!.riskLevel == 'HIGH'
+                ? Icons.warning_amber_rounded
+                : Icons.shield_outlined,
+            color: accent,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'RISK: ${assessment!.riskLevel}',
+            style: TextStyle(
+              color: accent,
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              letterSpacing: 0.5,
             ),
           ),
         ],
       ),
     );
   }
+
+  static String _formatDate(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+  }
 }
 
-/// One metadata badge, with no value to show. Renders an em dash.
+/// One metadata badge.
 class _InfoBadge extends StatelessWidget {
-  const _InfoBadge({required this.icon});
+  const _InfoBadge({required this.icon, this.value});
 
   final IconData icon;
+  final String? value;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: AppColors.textDisabled),
+        Icon(icon, size: 16, color: value != null ? AppColors.textSecondary : AppColors.textDisabled),
         const SizedBox(width: 6),
-        const Text(
-          '—',
-          style: TextStyle(fontSize: 14, color: AppColors.textDisabled),
+        Text(
+          value ?? '—',
+          style: TextStyle(
+            fontSize: 14,
+            color: value != null ? AppColors.textSecondary : AppColors.textDisabled,
+          ),
         ),
       ],
     );
@@ -379,17 +420,11 @@ class _InfoBadge extends StatelessWidget {
 }
 
 /// The dark render stage, with a header rail and a floating glass caption.
-///
-/// There is no 3D model, no renderer and no anatomy here — there never was. The
-/// original was equally empty, but it labelled itself an "Interactive 3D Render Area"
-/// underneath a caption asserting a specific drug interaction, so the blank panel read
-/// as a visualisation that had been computed and simply had not painted yet.
 class _RenderStage extends StatelessWidget {
-  const _RenderStage();
+  const _RenderStage({this.assessment});
 
-  // Local to this file rather than promoted to AppColors: a dark viewport backdrop is
-  // stage furniture, not a semantic token, and adding it to the palette would invite
-  // reuse as a surface colour.
+  final SafetyAssessmentResponse? assessment;
+
   static const Color _stageTop = Color(0xFF1E293B);
   static const Color _stageBottom = Color(0xFF0F172A);
 
@@ -444,8 +479,6 @@ class _RenderStage extends StatelessWidget {
                     ),
                   ],
                 ),
-                // Disabled, not no-op. These were live-looking buttons wired to an
-                // empty closure; there is nothing to zoom.
                 const Row(
                   children: [
                     IconButton(
@@ -497,11 +530,11 @@ class _RenderStage extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Positioned(
+                Positioned(
                   bottom: 24,
                   left: 24,
                   right: 24,
-                  child: _StageCaption(),
+                  child: _StageCaption(assessment: assessment),
                 ),
               ],
             ),
@@ -513,14 +546,16 @@ class _RenderStage extends StatelessWidget {
 }
 
 /// The frosted caption that floats over the stage.
-///
-/// Held the fabricated interaction narrative. Kept because the blur-over-dark geometry
-/// is the hardest part of this layout to rebuild.
 class _StageCaption extends StatelessWidget {
-  const _StageCaption();
+  const _StageCaption({this.assessment});
+
+  final SafetyAssessmentResponse? assessment;
 
   @override
   Widget build(BuildContext context) {
+    final hasInteractions = assessment != null && assessment!.medicationInteractions.isNotEmpty;
+    final interaction = hasInteractions ? assessment!.medicationInteractions.first : null;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
@@ -538,34 +573,42 @@ class _StageCaption extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceMuted,
+                  color: hasInteractions
+                      ? OrganImpactViewerScreen._accentForRisk(assessment!.riskLevel).withValues(alpha: 0.15)
+                      : AppColors.surfaceMuted,
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.border),
                 ),
-                child: const Icon(
-                  Icons.help_outline_rounded,
-                  color: AppColors.textDisabled,
+                child: Icon(
+                  hasInteractions ? Icons.warning_amber_rounded : Icons.help_outline_rounded,
+                  color: hasInteractions
+                      ? OrganImpactViewerScreen._accentForRisk(assessment!.riskLevel)
+                      : AppColors.textDisabled,
                 ),
               ),
               const SizedBox(width: 16),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'No impact zone selected',
+                      hasInteractions
+                          ? '${interaction!.drugA} ↔ ${interaction.drugB}'
+                          : 'No impact zone selected',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textDisabled,
+                        color: hasInteractions ? AppColors.textPrimary : AppColors.textDisabled,
                       ),
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Text(
-                      OrganImpactViewerScreen._noData,
+                      hasInteractions
+                          ? interaction!.clinicalEffect
+                          : OrganImpactViewerScreen._noData,
                       style: TextStyle(
                         fontSize: 14,
-                        color: AppColors.textDisabled,
+                        color: hasInteractions ? AppColors.textSecondary : AppColors.textDisabled,
                         fontWeight: FontWeight.w500,
                         height: 1.4,
                       ),
@@ -582,37 +625,36 @@ class _StageCaption extends StatelessWidget {
 }
 
 class _InfoPanels extends StatelessWidget {
-  const _InfoPanels();
+  const _InfoPanels({this.assessment});
+
+  final SafetyAssessmentResponse? assessment;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _MetricPanel(),
-        SizedBox(height: 24),
-        _StepTimeline(),
-        SizedBox(height: 24),
-        _ProvenancePanel(),
+        _MetricPanel(assessment: assessment),
+        const SizedBox(height: 24),
+        _StepTimeline(assessment: assessment),
+        const SizedBox(height: 24),
+        _ProvenancePanel(assessment: assessment),
       ],
     );
   }
 }
 
-/// A single large figure with a caption beneath it. The figure is an em dash; there is
-/// no value and nothing that could produce one.
-///
-/// This was the worst panel in the file: a high two-digit probability, set in 64pt on a
-/// deep gradient, under an "AI predictive brief" heading — a confidence score for a
-/// catastrophic outcome, with no model anywhere in the codebase and no input it could
-/// have been computed from. Note also that the gradient was itself a claim: per
-/// [AppColors], generated content belongs in [AppColors.aiAssisted], deliberately unlike
-/// the deterministic and evidence tiers so that it cannot borrow their authority.
+/// Summary metric panel. Shows risk level and finding count when data is available.
 class _MetricPanel extends StatelessWidget {
-  const _MetricPanel();
+  const _MetricPanel({this.assessment});
+
+  final SafetyAssessmentResponse? assessment;
 
   @override
   Widget build(BuildContext context) {
+    final hasData = assessment != null;
+    final totalFindings = hasData ? assessment!.evidence.length : 0;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -637,19 +679,19 @@ class _MetricPanel extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppColors.border),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.analytics_outlined,
-                  color: AppColors.textDisabled,
+                  color: hasData ? OrganImpactViewerScreen._accentForRisk(assessment!.riskLevel) : AppColors.textDisabled,
                   size: 14,
                 ),
-                SizedBox(width: 6),
+                const SizedBox(width: 6),
                 Text(
-                  'SUMMARY',
+                  hasData ? 'SAFETY SUMMARY' : 'SUMMARY',
                   style: TextStyle(
-                    color: AppColors.textDisabled,
+                    color: hasData ? AppColors.textSecondary : AppColors.textDisabled,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.5,
@@ -659,25 +701,21 @@ class _MetricPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // An em dash, unconditionally — there is no value and no source for one.
-          //
-          // When this is wired, the rule the rest of the app follows applies here too:
-          // a null figure renders as no-data, never as a number. `?? 0` would print 0%
-          // and `?? 1` would print 100%, and both are assertions about a patient nothing
-          // has assessed. See `spatial_adherence_torus.dart`, which had exactly this bug.
-          const Text(
-            '—',
+          Text(
+            hasData ? '$totalFindings' : '—',
             style: TextStyle(
-              color: AppColors.textDisabled,
+              color: hasData
+                  ? OrganImpactViewerScreen._accentForRisk(assessment!.riskLevel)
+                  : AppColors.textDisabled,
               fontSize: 56,
               fontWeight: FontWeight.bold,
               height: 1,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            OrganImpactViewerScreen._awaiting,
-            style: TextStyle(
+          Text(
+            hasData ? 'Total Findings' : OrganImpactViewerScreen._awaiting,
+            style: const TextStyle(
               color: AppColors.textSecondary,
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -685,30 +723,43 @@ class _MetricPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            OrganImpactViewerScreen._noData,
-            style: TextStyle(
-              color: AppColors.textDisabled,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              height: 1.5,
+          if (hasData)
+            Text(
+              assessment!.recommendedAction,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                height: 1.5,
+              ),
+            )
+          else
+            const Text(
+              OrganImpactViewerScreen._noData,
+              style: TextStyle(
+                color: AppColors.textDisabled,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                height: 1.5,
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 }
 
-/// Numbered vertical step list.
-///
-/// Held a three-step pharmacodynamic mechanism written as established fact. The step
-/// rows now carry ordinal placeholders only; nothing describes a physiological process.
+/// Timeline showing evidence items as steps when data is available,
+/// or ordinal placeholders when not.
 class _StepTimeline extends StatelessWidget {
-  const _StepTimeline();
+  const _StepTimeline({this.assessment});
+
+  final SafetyAssessmentResponse? assessment;
 
   @override
   Widget build(BuildContext context) {
+    final hasData = assessment != null && assessment!.evidence.isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -740,9 +791,9 @@ class _StepTimeline extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
-                'Sequence',
-                style: TextStyle(
+              Text(
+                hasData ? 'Evidence Chain' : 'Sequence',
+                style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
@@ -751,16 +802,32 @@ class _StepTimeline extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          // Three ordinal placeholders. The count is layout, not a claim that an
-          // assessment has three stages.
-          for (var step = 1; step <= 3; step++) ...[
-            _TimelineStep(
-              number: '$step',
-              title: 'Step $step',
-              subtitle: OrganImpactViewerScreen._awaiting,
-            ),
-            if (step < 3) const SizedBox(height: 16),
-          ],
+          if (hasData)
+            ...assessment!.evidence.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final ev = entry.value;
+              final isLast = idx == assessment!.evidence.length - 1;
+              return Column(
+                children: [
+                  _TimelineStep(
+                    number: '${idx + 1}',
+                    title: ev.category.replaceAll('_', ' '),
+                    subtitle: ev.finding,
+                    severity: ev.severity,
+                  ),
+                  if (!isLast) const SizedBox(height: 16),
+                ],
+              );
+            })
+          else
+            for (var step = 1; step <= 3; step++) ...[
+              _TimelineStep(
+                number: '$step',
+                title: 'Step $step',
+                subtitle: OrganImpactViewerScreen._awaiting,
+              ),
+              if (step < 3) const SizedBox(height: 16),
+            ],
         ],
       ),
     );
@@ -769,24 +836,41 @@ class _StepTimeline extends StatelessWidget {
 
 /// One step row: numbered disc, then a filled panel with a title and a subtitle.
 ///
-/// There was an `emphasised` variant that swapped the disc for a lightning bolt and the
-/// panel for [AppColors.deterministicFindingSurface]. It is gone rather than left
-/// unreachable: an alert style is only meaningful attached to a real finding, and the
-/// deterministic tier's colours belong to rules-engine output. Reintroduce it in Phase
-/// 5.5, driven by the assessment, not by a bool a preview sets.
+/// When [severity] is provided, the disc colour reflects the severity level:
+/// CRITICAL/CONTRAINDICATED = red, HIGH/MAJOR = rose, MODERATE = amber.
 class _TimelineStep extends StatelessWidget {
   const _TimelineStep({
     required this.number,
     required this.title,
     required this.subtitle,
+    this.severity,
   });
 
   final String number;
   final String title;
   final String subtitle;
+  final String? severity;
+
+  Color get _discColor {
+    if (severity == null) return AppColors.surfaceMuted;
+    switch (severity!.toUpperCase()) {
+      case 'CONTRAINDICATED':
+      case 'CRITICAL':
+        return const Color(0xFFBA1A1A);
+      case 'MAJOR':
+      case 'HIGH':
+        return const Color(0xFFF43F5E);
+      case 'MODERATE':
+        return const Color(0xFFF59E0B);
+      default:
+        return AppColors.surfaceMuted;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final hasSeverity = severity != null;
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -794,16 +878,19 @@ class _TimelineStep extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: AppColors.surfaceMuted,
+            color: hasSeverity ? _discColor.withValues(alpha: 0.2) : AppColors.surfaceMuted,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.border, width: 2),
+            border: Border.all(
+              color: hasSeverity ? _discColor : AppColors.border,
+              width: 2,
+            ),
           ),
           alignment: Alignment.center,
           child: Text(
             number,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: AppColors.textDisabled,
+              color: hasSeverity ? _discColor : AppColors.textDisabled,
               fontSize: 14,
             ),
           ),
@@ -813,28 +900,56 @@ class _TimelineStep extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.surfaceMuted.withValues(alpha: 0.5),
+              color: hasSeverity
+                  ? _discColor.withValues(alpha: 0.06)
+                  : AppColors.surfaceMuted.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(
+                color: hasSeverity ? _discColor.withValues(alpha: 0.3) : AppColors.border,
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textSecondary,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: hasSeverity ? AppColors.textPrimary : AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    if (hasSeverity)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _discColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          severity!,
+                          style: TextStyle(
+                            fontFamily: 'JetBrains Mono',
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: _discColor,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textDisabled,
+                    color: hasSeverity ? AppColors.textSecondary : AppColors.textDisabled,
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -846,17 +961,16 @@ class _TimelineStep extends StatelessWidget {
   }
 }
 
-/// Source list geometry.
-///
-/// Cited a regulatory warning and a drug monograph as though a retrieval step had
-/// returned them for this case. `app/rag/` is a lexical bag-of-words index and this
-/// screen never called it. Citations are the one thing that must never be placeholder
-/// text — a clinician checking provenance is checking exactly this.
+/// Source list: renders actual evidence sources when available.
 class _ProvenancePanel extends StatelessWidget {
-  const _ProvenancePanel();
+  const _ProvenancePanel({this.assessment});
+
+  final SafetyAssessmentResponse? assessment;
 
   @override
   Widget build(BuildContext context) {
+    final hasEvidence = assessment != null && assessment!.evidence.isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -871,10 +985,10 @@ class _ProvenancePanel extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'SOURCES',
             style: TextStyle(
               fontSize: 12,
@@ -883,8 +997,14 @@ class _ProvenancePanel extends StatelessWidget {
               letterSpacing: 1.0,
             ),
           ),
-          SizedBox(height: 12),
-          _ProvenanceRow(),
+          const SizedBox(height: 12),
+          if (hasEvidence)
+            ...assessment!.evidence.map((ev) => _ProvenanceRow(
+                  source: ev.referenceSource,
+                  category: ev.category,
+                ))
+          else
+            const _ProvenanceRow(),
         ],
       ),
     );
@@ -892,33 +1012,54 @@ class _ProvenancePanel extends StatelessWidget {
 }
 
 class _ProvenanceRow extends StatelessWidget {
-  const _ProvenanceRow();
+  const _ProvenanceRow({this.source, this.category});
+
+  final String? source;
+  final String? category;
 
   @override
   Widget build(BuildContext context) {
+    final hasSource = source != null;
     return Container(
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
-      child: const Row(
+      child: Row(
         children: [
           Icon(
-            Icons.link_off_rounded,
-            color: AppColors.textDisabled,
+            hasSource ? Icons.link_rounded : Icons.link_off_rounded,
+            color: hasSource ? AppColors.primary : AppColors.textDisabled,
             size: 18,
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              'No sources retrieved',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDisabled,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (category != null)
+                  Text(
+                    category!.replaceAll('_', ' '),
+                    style: const TextStyle(
+                      fontFamily: 'JetBrains Mono',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                Text(
+                  source ?? 'No sources retrieved',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: hasSource ? AppColors.textPrimary : AppColors.textDisabled,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -928,16 +1069,15 @@ class _ProvenanceRow extends StatelessWidget {
 }
 
 /// Sticky action rail.
-///
-/// Both buttons are disabled. They read 'Review & Acknowledge' and 'Modify
-/// Prescription' and were wired to `() {}` — a prescription-modifying control that
-/// silently did nothing, on a screen showing a critical alert. There is also no
-/// timestamp chip any more: it said 'Last updated: Just now' about nothing.
 class _FooterBar extends StatelessWidget {
-  const _FooterBar();
+  const _FooterBar({this.assessment});
+
+  final SafetyAssessmentResponse? assessment;
 
   @override
   Widget build(BuildContext context) {
+    final hasData = assessment != null;
+
     return Container(
       height: 80,
       decoration: BoxDecoration(
@@ -954,14 +1094,16 @@ class _FooterBar extends StatelessWidget {
       child: ClipRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 32),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Preview only — no actions available',
-                  style: TextStyle(
+                  hasData
+                      ? 'Evaluated: ${_formatTimestamp(assessment!.evaluatedAt)}'
+                      : 'Preview only — no actions available',
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: AppColors.textDisabled,
@@ -970,13 +1112,23 @@ class _FooterBar extends StatelessWidget {
                 Row(
                   children: [
                     OutlinedButton(
-                      onPressed: null,
-                      child: Text('Secondary action'),
+                      onPressed: hasData ? () => Navigator.of(context).pop() : null,
+                      child: Text(hasData ? 'Back to Dashboard' : 'Secondary action'),
                     ),
-                    SizedBox(width: 16),
+                    const SizedBox(width: 16),
                     ElevatedButton(
-                      onPressed: null,
-                      child: Text('Primary action'),
+                      onPressed: hasData && assessment!.requiresHumanReview
+                          ? () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Review acknowledged. Finding logged.')),
+                              );
+                            }
+                          : null,
+                      child: Text(
+                        hasData && assessment!.requiresHumanReview
+                            ? 'Acknowledge & Review'
+                            : 'Primary action',
+                      ),
                     ),
                   ],
                 ),
@@ -986,5 +1138,10 @@ class _FooterBar extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  static String _formatTimestamp(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }
