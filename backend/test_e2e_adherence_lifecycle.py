@@ -93,9 +93,13 @@ def ensure_seed_data():
         )
         patient_user_id = cur.lastrowid
 
-    # 5. Create the patient profile independently of the patient user
-    cur.execute("SELECT id FROM patients WHERE user_id = ?", (patient_user_id,))
-    if not cur.fetchone():
+    # 5. Create or repair the patient profile independently of the patient user
+    cur.execute("SELECT id, preferred_language FROM patients WHERE user_id = ?", (patient_user_id,))
+    patient_row = cur.fetchone()
+    if patient_row:
+        if patient_row[1] is None:
+            cur.execute("UPDATE patients SET preferred_language = 'en', updated_at = ? WHERE id = ?", (now, patient_row[0]))
+    else:
         cur.execute(
             "INSERT INTO patients (user_id, timezone, preferred_language, created_at, updated_at) "
             "VALUES (?, 'Asia/Kolkata', 'en', ?, ?)",
