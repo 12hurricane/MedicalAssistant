@@ -97,8 +97,8 @@ def ensure_seed_data():
     cur.execute("SELECT id FROM patients WHERE user_id = ?", (patient_user_id,))
     if not cur.fetchone():
         cur.execute(
-            "INSERT INTO patients (user_id, timezone, created_at, updated_at) "
-            "VALUES (?, 'Asia/Kolkata', ?, ?)",
+            "INSERT INTO patients (user_id, timezone, preferred_language, created_at, updated_at) "
+            "VALUES (?, 'Asia/Kolkata', 'en', ?, ?)",
             (patient_user_id, now, now),
         )
 
