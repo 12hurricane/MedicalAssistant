@@ -105,9 +105,19 @@ def locate_patient(cursor):
 
 
 def reset_events(cursor, patient_id):
-    """Clears this patient's dose history so today's doses are pending again."""
+    """Clears this synthetic demo patient's dose history so today's doses are pending again."""
+    # Clinical Safety Guard: Ensure reset can NEVER touch a real/non-synthetic patient
+    user_row = cursor.execute(
+        "SELECT u.email FROM users u JOIN patients p ON p.user_id = u.id WHERE p.id = ?",
+        (patient_id,),
+    ).fetchone()
+    if not user_row or user_row["email"] != EMAIL:
+        raise PermissionError(
+            f"CLINICAL SAFETY VIOLATION: Refusing to reset events for non-demo patient (ID: {patient_id})"
+        )
+
     cursor.execute("delete from medication_events where patient_id = ?", (patient_id,))
-    print(f"deleted {cursor.rowcount} medication event(s) for patient {patient_id}")
+    print(f"deleted {cursor.rowcount} medication event(s) for synthetic demo patient {patient_id}")
 
 
 def create_prescription(cursor, patient_id):
