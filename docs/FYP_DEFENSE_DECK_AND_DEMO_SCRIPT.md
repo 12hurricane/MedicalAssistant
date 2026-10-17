@@ -3,7 +3,8 @@
 **Project Title:** MedAssist AI: A Hybrid Clinical Decision Support System with Deterministic Safety Boundaries and Resilient Low-Latency Generative Routing  
 **Domain:** Healthcare AI / Distributed Clinical Systems / Safe Human-in-the-Loop AI  
 **Repository:** [github.com/12hurricane/MedicalAssistant](https://github.com/12hurricane/MedicalAssistant)  
-**Release Tag:** `v1.0.0`
+**Release Tag:** `v1.0.1`  
+**Android Release APK:** [app-release.apk](https://github.com/12hurricane/MedicalAssistant/releases/download/v1.0.1/app-release.apk) | QR: `docs/medassist_apk_qr.png`
 
 ---
 
@@ -167,9 +168,13 @@
   * **Safety First:** 100% deterministic clinical and adherence core.
   * **Performance:** 93% latency reduction via 4-tier hybrid AI routing.
   * **Resilience:** Uncompromised operation across cloud and zero-internet environments.
-  * **Verification:** Validated with 27 pytest suites, 10 adversarial stress vectors, and full CI/CD.
+  * **Verification:** Validated with 27 pytest suites, 10 adversarial stress vectors, and 10 green CI/CD runs.
+* **Interactive QR Code & APK:**
+  * Embed QR Code image from `docs/medassist_apk_qr.png` on the right half of the slide.
+  * Caption: *"Scan to download and install MedAssist AI Android APK (`app-release.apk`, 51.8 MB)"*
+  * Direct Link: [v1.0.1 APK Download](https://github.com/12hurricane/MedicalAssistant/releases/download/v1.0.1/app-release.apk)
 * **Speaker Script (30s):**
-  > "In conclusion, MedAssist AI proves that generative artificial intelligence can be safely and responsively integrated into clinical healthcare when bounded by strict deterministic principles. Thank you for your time. We are now ready to demonstrate the live platform and welcome your questions."
+  > "In conclusion, MedAssist AI proves that generative artificial intelligence can be safely and responsively integrated into clinical healthcare when bounded by strict deterministic principles. You can scan the QR code on screen right now to install the production Android build on your mobile device. Thank you for your time. We are now ready to demonstrate the live platform and welcome your questions."
 
 ---
 ---
