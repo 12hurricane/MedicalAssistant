@@ -26,7 +26,7 @@ from datetime import date, datetime, timedelta
 
 import os
 BASE = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000/api/v1")
-DB = "medication.db"
+DB = os.environ.get("DATABASE_PATH", "medication.db" if os.path.exists("medication.db") else "backend/medication.db")
 
 EMAIL = "flutter_walkthrough@example.com"
 PASSWORD = "FlutterWalk2026!"

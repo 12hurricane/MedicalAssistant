@@ -14,7 +14,7 @@ services:
     # frontend (depends_on: service_healthy) from starting.
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips=*"
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - db_data:/app/data
       - ./backend/medication.db:/app/medication.db
