@@ -55,13 +55,21 @@ jobs:
           
           # Wait for server /health endpoint to become responsive
           echo "Waiting for backend service to report healthy..."
+          ready=false
           for i in {1..30}; do
             if curl -s http://127.0.0.1:8000/health | grep -q '"status":"ok"'; then
+              ready=true
               echo "Backend is ready!"
               break
             fi
             sleep 1
           done
+
+          if [ "$ready" != "true" ]; then
+            echo "==== ERROR: Backend failed to become healthy within 30 seconds ===="
+            cat server.log
+            exit 1
+          fi
 
           # Execute E2E Lifecycle Script and dump server.log on failure
           python test_e2e_adherence_lifecycle.py || { echo "==== SERVER LOG ON FAILURE ===="; tail -n 200 server.log; exit 1; }
