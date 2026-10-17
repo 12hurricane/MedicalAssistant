@@ -12,7 +12,7 @@ jobs:
   # ---------------------------------------------------------------------------
   backend-test:
     name: Backend Tests & Quality Gates
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       DATABASE_URL: "sqlite+aiosqlite:///./medication.db"
       SECRET_KEY: "ci-testing-secret-key-do-not-use-in-production"
@@ -71,7 +71,7 @@ jobs:
   # ---------------------------------------------------------------------------
   docker-verification:
     name: Docker & Packaging Verification
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: backend-test
 
     steps:
@@ -99,7 +99,7 @@ jobs:
   # ---------------------------------------------------------------------------
   flutter-validation:
     name: Flutter Web Quality Gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout Code
