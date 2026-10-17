@@ -106,7 +106,13 @@ def locate_patient(cursor):
 
 def reset_events(cursor, patient_id):
     """Clears this synthetic demo patient's dose history so today's doses are pending again."""
-    # Clinical Safety Guard: Ensure reset can NEVER touch a real/non-synthetic patient
+    # Production Safety Guard: Strictly block destructive resets in production
+    if os.environ.get("ENVIRONMENT", "").lower() == "production" and not os.environ.get("ALLOW_DEMO_RESET", ""):
+        raise PermissionError(
+            "CLINICAL SAFETY VIOLATION: Demo resets are strictly disabled in production environments."
+        )
+
+    # Clinical Identity Guard: Ensure reset can NEVER touch a real/non-synthetic patient
     user_row = cursor.execute(
         "SELECT u.email FROM users u JOIN patients p ON p.user_id = u.id WHERE p.id = ?",
         (patient_id,),
