@@ -106,10 +106,13 @@ def locate_patient(cursor):
 
 def reset_events(cursor, patient_id):
     """Clears this synthetic demo patient's dose history so today's doses are pending again."""
-    # Production Safety Guard: Strictly block destructive resets in production
-    if os.environ.get("ENVIRONMENT", "").lower() == "production" and not os.environ.get("ALLOW_DEMO_RESET", ""):
+    # Fail-Closed Environment Guard: Only explicitly permit development, test, or demo
+    allowed_envs = {"development", "test", "demo"}
+    env = os.environ.get("ENVIRONMENT", "").lower().strip()
+    if env not in allowed_envs:
         raise PermissionError(
-            "CLINICAL SAFETY VIOLATION: Demo resets are strictly disabled in production environments."
+            f"CLINICAL SAFETY VIOLATION: Demo resets are strictly fail-closed and prohibited in '{env or 'unspecified'}' environment. "
+            f"Allowed environments: {sorted(allowed_envs)}"
         )
 
     # Clinical Identity Guard: Ensure reset can NEVER touch a real/non-synthetic patient

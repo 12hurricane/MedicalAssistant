@@ -45,25 +45,32 @@ def test_reset_events_blocks_nonexistent_patient(mock_db):
     
     assert "CLINICAL SAFETY VIOLATION" in str(exc_info.value)
 
-def test_reset_events_blocks_production_environment(mock_db, monkeypatch):
-    """Proves that calling reset_events is completely blocked when ENVIRONMENT=production."""
-    monkeypatch.setenv("ENVIRONMENT", "production")
-    monkeypatch.delenv("ALLOW_DEMO_RESET", raising=False)
-    
-    with pytest.raises(PermissionError) as exc_info:
-        reset_events(mock_db, patient_id=102)
-    
-    assert "strictly disabled in production" in str(exc_info.value)
+def test_reset_events_blocks_production_and_unauthorized_environments(mock_db, monkeypatch):
+    """Proves that calling reset_events fails closed when ENVIRONMENT is production, staging, or unset."""
+    for bad_env in ["production", "staging", "uat", "", None]:
+        if bad_env is None:
+            monkeypatch.delenv("ENVIRONMENT", raising=False)
+        else:
+            monkeypatch.setenv("ENVIRONMENT", bad_env)
+        
+        with pytest.raises(PermissionError) as exc_info:
+            reset_events(mock_db, patient_id=102)
+        
+        assert "strictly fail-closed" in str(exc_info.value)
 
-def test_reset_events_allows_synthetic_demo_patient_in_dev(mock_db, monkeypatch):
-    """Proves that synthetic demo patient 102 is successfully reset only in development/testing."""
-    monkeypatch.setenv("ENVIRONMENT", "development")
-    reset_events(mock_db, patient_id=102)
-    
-    # Synthetic events deleted
-    count = mock_db.execute("SELECT count(*) FROM medication_events WHERE patient_id = 102").fetchone()[0]
-    assert count == 0
-    
-    # Real patient events still 100% untouched
-    real_count = mock_db.execute("SELECT count(*) FROM medication_events WHERE patient_id = 101").fetchone()[0]
-    assert real_count == 2
+def test_reset_events_allows_synthetic_demo_patient_in_dev_and_test(mock_db, monkeypatch):
+    """Proves that synthetic demo patient 102 can only be reset in development or test."""
+    for valid_env in ["development", "test", "demo"]:
+        monkeypatch.setenv("ENVIRONMENT", valid_env)
+        
+        # Insert a dummy event so there's something to delete
+        mock_db.execute("INSERT OR REPLACE INTO medication_events VALUES (3, 102, 'SKIPPED')")
+        reset_events(mock_db, patient_id=102)
+        
+        # Synthetic events deleted
+        count = mock_db.execute("SELECT count(*) FROM medication_events WHERE patient_id = 102").fetchone()[0]
+        assert count == 0
+        
+        # Real patient events still 100% untouched
+        real_count = mock_db.execute("SELECT count(*) FROM medication_events WHERE patient_id = 101").fetchone()[0]
+        assert real_count == 2
