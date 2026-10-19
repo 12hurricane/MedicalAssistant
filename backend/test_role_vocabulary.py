@@ -219,8 +219,21 @@ async def _a_patient_id(client, session, email="subject@example.com"):
 
 async def test_a_clinician_may_read_another_patients_safety_assessment(client, session):
     """The positive case. Without it, a 403-for-everyone bug would look like success."""
+    from app.models.clinician_patient_assignment import ClinicianPatientAssignment
+    from app.models.types import utcnow
+
     patient_id = await _a_patient_id(client, session)
     headers = await register(client, "reviewer@example.com", role="CLINICIAN")
+
+    user_clin = (
+        await session.execute(select(User).where(User.email == "reviewer@example.com"))
+    ).scalars().one()
+    session.add(ClinicianPatientAssignment(
+        clinician_id=user_clin.id,
+        patient_id=patient_id,
+        assigned_at=utcnow(),
+    ))
+    await session.commit()
 
     r = await client.get(f"/api/v1/patients/{patient_id}/safety", headers=headers)
 

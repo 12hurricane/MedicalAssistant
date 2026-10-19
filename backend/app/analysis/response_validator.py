@@ -35,6 +35,9 @@ from app.rag.retriever import FindingEvidenceBundle
 from app.rules.safety_assessment import SafetyAssessment
 from app.services.adherence_service import AdherenceMetrics
 
+from app.rag.indexer import _tokenize
+from app.rules.drug_normalizer import CANONICAL_DRUG_CATALOG
+
 logger = logging.getLogger(__name__)
 
 # Dangerous dosing instructions that must NEVER appear in patient explanations
@@ -46,6 +49,18 @@ PROHIBITED_DOSING_PATTERNS = [
     r"\bincrease\s+your\s+dose\b",
     r"\bdecrease\s+your\s+dose\b",
     r"\bchange\s+your\s+prescription\b",
+]
+
+# Minimization patterns that must NEVER describe a HIGH or CRITICAL clinical finding
+MINIMIZATION_PATTERNS = [
+    r"\b(no|zero|without)\s+(reason|cause|need)\s+for\s+concern\b",
+    r"\bthere\s+is\s+no\s+(reason\s+for\s+)?concern\b",
+    r"\bno\s+safety\s+concerns?\b",
+    r"\bcompletely\s+safe\b",
+    r"\bnothing\s+to\s+worry\s+about\b",
+    r"\ball\s+is\s+well\b",
+    r"\beverything\s+is\s+fine\b",
+    r"\bno\s+action\s+(is\s+)?needed\b",
 ]
 
 
@@ -129,6 +144,89 @@ class ResponseValidator:
             explanation.what_to_do_next = SAFE_DEFAULT_ACTION
 
     @staticmethod
+    def validate_narrative_consistency(
+        explanation: PatientExplanation,
+        safety_assessment: SafetyAssessment,
+    ) -> None:
+        """
+        Validate semantic narrative consistency against deterministic risk.
+        Action safety and narrative consistency are separate problems:
+        an action classifier checks for dosing changes, while this validator checks
+        that an LLM does not falsely soothe a patient or minimize a HIGH/CRITICAL finding
+        even when no explicit medication-changing action is proposed.
+        """
+        if safety_assessment.risk_level in ("HIGH", "CRITICAL"):
+            combined = (
+                f"{explanation.summary} {explanation.why_it_matters} {explanation.what_to_do_next}"
+            ).lower()
+            for pattern in MINIMIZATION_PATTERNS:
+                if re.search(pattern, combined):
+                    logger.warning(
+                        f"Narrative Minimization Violation: text matched '{pattern}' "
+                        f"under {safety_assessment.risk_level} risk. Replacing with safe deterministic narrative."
+                    )
+                    explanation.summary = (
+                        f"Safety alert: Deterministic risk assessment is {safety_assessment.risk_level}. "
+                        "Clinician review is required."
+                    )
+                    explanation.why_it_matters = (
+                        "Taking medications consistently and addressing clinical risks is vital "
+                        "to prevent complications."
+                    )
+                    break
+
+    @staticmethod
+    def verify_citation_support(
+        claim: str,
+        citation_id: str,
+        evidence_bundle: FindingEvidenceBundle,
+    ) -> tuple[bool, str]:
+        """
+        Distinguishes Citation Validity from Citation Support:
+        - Citation validity: Does the referenced source exist in the evidence bundle?
+        - Citation support: Does the referenced passage actually justify the generated claim?
+        """
+        matching_chunk = None
+        for res in evidence_bundle.results:
+            for chunk in res.citable_evidence:
+                if chunk.document_id == citation_id or chunk.chunk_id == citation_id:
+                    matching_chunk = chunk
+                    break
+            if matching_chunk:
+                break
+
+        if not matching_chunk:
+            return False, f"Citation invalid: ID '{citation_id}' not found in evidence bundle."
+
+        # Support check 1: Target entity check
+        claim_lower = claim.lower()
+        chunk_drug = matching_chunk.drug_name.lower()
+
+        # If claim explicitly references a different drug, flag entity mismatch
+        for drug_id, drug_entry in CANONICAL_DRUG_CATALOG.items():
+            if drug_id != chunk_drug:
+                all_names = [drug_id, drug_entry.generic_name.lower()] + [b.lower() for b in drug_entry.brand_names]
+                if any(re.search(rf"\b{re.escape(name)}\b", claim_lower) for name in all_names):
+                    if not re.search(rf"\b{re.escape(chunk_drug)}\b", claim_lower):
+                        return False, (
+                            f"Citation unsupported: cited passage '{citation_id}' discusses "
+                            f"'{chunk_drug}', but claim refers to '{drug_id}'."
+                        )
+
+        # Support check 2: Substantive clinical token overlap
+        claim_tokens = set(_tokenize(claim))
+        chunk_tokens = set(_tokenize(matching_chunk.text))
+        overlap = claim_tokens.intersection(chunk_tokens)
+
+        if len(overlap) < 2:
+            return False, (
+                f"Citation unsupported: cited passage '{citation_id}' has insufficient "
+                f"overlap with claim text."
+            )
+
+        return True, f"Citation valid and supported by '{citation_id}'."
+
+    @staticmethod
     def validate_metrics_integrity(
         clinical_brief: ClinicalBrief,
         metrics: AdherenceMetrics,
@@ -204,7 +302,9 @@ class ResponseValidator:
         """Run all validators and return guaranteed compliant result."""
         cls.validate_safety_invariants(result, safety_assessment)
         cls.validate_no_unsafe_dosing(result.patient_explanation)
+        cls.validate_narrative_consistency(result.patient_explanation, safety_assessment)
         cls.validate_generative_insights(result, safety_assessment, evidence_bundle)
         cls.validate_metrics_integrity(result.clinical_brief, metrics)
         result.validation_passed = True
         return result
+
