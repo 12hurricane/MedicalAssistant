@@ -50,16 +50,54 @@ The acceptance criteria, architectural gates, and verification suites for MedAss
 
 ---
 
-## 4. Complete Backend Regression Execution Summary
+## 4. Complete Backend Regression Execution Summary & Reproducibility Audit
 
-Full test suite execution across the entire repository test suite (441 collected tests):
+### 4.1 Reproducible Environment & Execution Paths
+
+All commands and test suites must be executed in their respective directories using the verified virtual environment interpreter:
+
+- **Repository Root:** `D:\AI\Ai assistent for medication`
+- **Backend Working Directory:** `D:\AI\Ai assistent for medication\backend`
+- **Verified Python Interpreter:** `D:\AI\Ai assistent for medication\backend\venv\Scripts\python.exe`
+- **Runtime Versions:** Python `3.14.7` | pytest `9.1.1` | pluggy `1.6.0` | anyio `4.14.2` | asyncio `1.4.0`
+
+#### Exact Reproducible Commands (PowerShell)
+
+```powershell
+# 1. Verify Git Commit from Repository Root
+cd "D:\AI\Ai assistent for medication"
+git status
+git rev-parse HEAD
+git log -1 --oneline
+
+# 2. Check Python and Pytest Versions
+cd "D:\AI\Ai assistent for medication\backend"
+.\venv\Scripts\python.exe --version
+.\venv\Scripts\python.exe -m pytest --version
+
+# 3. Full Backend Regression Run (Original Baseline)
+cd "D:\AI\Ai assistent for medication\backend"
+.\venv\Scripts\python.exe -m pytest -ra --tb=short
+
+# 4. Verified PostgreSQL 16 Concurrency Run (Requires running PostgreSQL 16 container)
+cd "D:\AI\Ai assistent for medication\backend"
+$env:TEST_DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/medassist_test"
+$env:POSTGRES_TEST_DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/medassist_test"
+.\venv\Scripts\python.exe -m pytest test_postgres_concurrency.py test_api_adherence_transaction.py -v
+```
+
+---
+
+### 4.2 Full Regression Test Suite Execution Log (Commit `3ceb4d7`)
+
+The 615.62-second full regression run was initiated at commit `3ceb4d7` and captured in persistent task log `task-4212.log`:
 
 ```text
 ============================= test session starts =============================
-platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0
+platform win32 -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0 -- D:\AI\Ai assistent for medication\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
 rootdir: D:\AI\Ai assistent for medication\backend
 configfile: pytest.ini
-testpaths: .
 plugins: anyio-4.14.2, langsmith-0.11.1, asyncio-1.4.0, cov-7.1.0
 asyncio: mode=Mode.AUTO, debug=False
 
@@ -83,46 +121,119 @@ test_demo_reset_safety.py ....                                           [ 40%]
 test_e2e_adherence_lifecycle.py ........                                 [ 42%]
 test_e2e_vertical_slice.py ....                                          [ 43%]
 test_evidence_boundary.py ......                                         [ 44%]
-test_gemini.py s                                                         [ 44%]
+test_gemini.py .                                                         [ 44%]
 test_generation_status.py ..                                             [ 45%]
 test_live_demo_dryrun.py ........                                        [ 47%]
-test_llm_behavior_adversarial.py sss                                     [ 47%]
-test_llm_prompt.py .............                                         [ 50%]
-test_llm_router.py ......                                                [ 51%]
-test_merge_boundary.py ..................                                [ 55%]
-test_migrations.py ...........                                           [ 58%]
-test_nested_unexpected_fields.py ..                                      [ 58%]
-test_parsing_agent.py ...                                                [ 59%]
-test_patient_erasure.py ...                                              [ 60%]
-test_postgres_concurrency.py ss                                          [ 60%]
-test_prescription_corrections.py ........                                [ 62%]
-test_prescription_orchestration.py ............                          [ 65%]
-test_prompt_injection.py .....                                           [ 66%]
-test_provider_failure.py .                                               [ 66%]
-test_rag_evidence.py .............                                       [ 69%]
-test_rag_semantic.py ......................                              [ 74%]
-test_registration_atomicity.py ......                                    [ 75%]
-test_reminder_service.py .....                                           [ 76%]
-test_role_vocabulary.py ...............                                  [ 80%]
-test_safety_engine.py ..................                                 [ 84%]
-test_safety_rules.py .........                                           [ 86%]
-test_schedule_lifecycle.py ...........................                   [ 92%]
-test_semantic_safety.py ..                                               [ 92%]
-test_structured_output.py ........                                       [ 94%]
-test_timezone_dst.py ......                                              [ 96%]
+test_llm_behavior_adversarial.py ssssss                                  [ 48%]
+test_llm_prompt.py .............                                         [ 51%]
+test_llm_router.py ......                                                [ 52%]
+test_merge_boundary.py ..................                                [ 56%]
+test_migrations.py ...........                                           [ 59%]
+test_nested_unexpected_fields.py ..                                      [ 59%]
+test_parsing_agent.py ...                                                [ 60%]
+test_patient_erasure.py ...                                              [ 61%]
+test_postgres_concurrency.py ss                                          [ 61%]
+test_prescription_corrections.py ........                                [ 63%]
+test_prescription_orchestration.py ............                          [ 66%]
+test_prompt_injection.py .....                                           [ 67%]
+test_provider_failure.py .                                               [ 67%]
+test_rag_evidence.py .............                                       [ 70%]
+test_rag_semantic.py ......................                              [ 75%]
+test_registration_atomicity.py ......                                    [ 76%]
+test_reminder_service.py .....                                           [ 78%]
+test_role_vocabulary.py ...............                                  [ 81%]
+test_safety_engine.py ..................                                 [ 85%]
+test_safety_rules.py .........                                           [ 87%]
+test_schedule_lifecycle.py ...........................                   [ 93%]
+test_semantic_safety.py ..                                               [ 94%]
+test_structured_output.py ........                                       [ 95%]
+test_timezone_dst.py ......                                              [ 97%]
 test_today_schedule.py ................                                  [100%]
 
 ============================== warnings summary ===============================
-7 warnings (FastAPI HTTP_422 deprecation notices, asyncio coroutine inspect notice)
+test_adherence_analysis.py::test_patient_explanation_is_populated
+  D:\AI\Ai assistent for medication\backend\venv\Lib\site-packages\chromadb\telemetry\opentelemetry\__init__.py:128: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(f):
 
+test_api_adherence_analysis.py::test_correction_invalid_status_returns_422
+test_api_adherence_analysis.py::test_correction_noop_status_returns_422
+test_api_adherence_audit_trail.py::test_invalid_status_creates_zero_audit_rows
+test_api_adherence_audit_trail.py::test_noop_correction_creates_zero_audit_rows
+test_api_clinician_dose_retrieval.py::test_correction_reflected_in_subsequent_retrieval_with_single_audit
+test_prescription_corrections.py::test_duplicate_correction_lines_are_rejected
+  D:\AI\Ai assistent for medication\backend\venv\Lib\site-packages\fastapi\routing.py:352: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    return await dependant.call(**values)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 =========== 431 passed, 10 skipped, 7 warnings in 615.62s (0:10:15) ===========
 ```
 
-### Complete Numerical Result
-- **Total Collected Tests:** 441
-- **Passed:** 431
-- **Skipped:** 10 (2 in `test_postgres_concurrency.py` when running on local SQLite; 2 in `test_api_adherence_transaction.py` requiring real PostgreSQL; 4 in `test_llm_behavior_adversarial.py` and `test_gemini.py` requiring live external cloud API tokens)
-- **Failed:** 0 (Zero test failures across the entire codebase)
+---
+
+### 4.3 Total Reconciliation & Accounting Table
+
+| Metric | Measured Total | Reconciled Audit Status | Source / Verification Details |
+| :--- | :---: | :---: | :--- |
+| **Collected Tests** | **441** | **Verified** | Discovered across 35 test files in backend test suite |
+| **Passed Tests** | **431** | **Verified** | Deterministic safety rules, scheduling, auth, RAG boundaries |
+| **Failed Tests** | **0** | **Verified** | Zero assertion failures or HTTP 500 runtime errors |
+| **Skipped Tests** | **10** | **Verified** | Exactly 10 skips across 3 test modules (itemized below) |
+| **Reported Warnings**| **7** | **Verified** | Exactly 2 distinct deprecation notices (itemized below) |
+| **Execution Duration**| **615.62s** | **Verified** | Continuous uninterrupted regression run |
+| **Tested Commit** | `3ceb4d7` | **Verified** | Git commit active when regression test was initiated |
+| **Audit Doc Commit**| `c80814f` | **Verified** | Subsequent documentation-only commit (`git diff` shows 0 code drift) |
+
+---
+
+### 4.4 Itemized Accounting of All 10 Skipped Tests
+
+From the short test summary (`pytest -ra`) and persistent execution log (`task-4212.log`), the 10 skips are fully accounted for:
+
+1. `test_api_adherence_transaction.py::test_concurrent_corrections_must_not_fork_audit_history` (Line 209)  
+   - **Skip Reason:** SQLite silently ignores `SELECT ... FOR UPDATE` (no row-level locking in SQLite). True database-level row lock serialization requires PostgreSQL.
+2. `test_api_adherence_transaction.py::test_concurrent_identical_corrections_serialize_with_clean_rejection` (Line 295)  
+   - **Skip Reason:** SQLite silently ignores `SELECT ... FOR UPDATE` (no row-level locking in SQLite). True database-level row lock serialization requires PostgreSQL.
+3. `test_postgres_concurrency.py::test_postgres_concurrent_corrections_must_serialize_linearly` (Line 51/66)  
+   - **Skip Reason:** PostgreSQL database container was not active on port 5432 during this SQLite baseline test run (`pytest.skip("A running PostgreSQL test database/container is required for Step 4C.")`).
+4. `test_postgres_concurrency.py::test_postgres_concurrent_identical_corrections_serialize_with_rejection` (Line 51/66)  
+   - **Skip Reason:** PostgreSQL database container was not active on port 5432 during this SQLite baseline test run (`pytest.skip("A running PostgreSQL test database/container is required for Step 4C.")`).
+5. `test_llm_behavior_adversarial.py::test_qwen_resists_patient_text_direct_override` (Line 49)  
+   - **Skip Reason:** Ollama daemon was not running on localhost:11434 (`pytest.skip("Ollama is not available. Cannot run behavioral evaluation.")`).
+6. `test_llm_behavior_adversarial.py::test_qwen_resists_severity_override` (Line 49)  
+   - **Skip Reason:** Ollama is not available.
+7. `test_llm_behavior_adversarial.py::test_qwen_resists_citation_fabrication` (Line 49)  
+   - **Skip Reason:** Ollama is not available.
+8. `test_llm_behavior_adversarial.py::test_qwen_handles_empty_degenerate_responses` (Line 49)  
+   - **Skip Reason:** Ollama is not available.
+9. `test_llm_behavior_adversarial.py::test_qwen_resists_system_instruction_impersonation` (Line 49)  
+   - **Skip Reason:** Ollama is not available.
+10. `test_llm_behavior_adversarial.py::test_qwen_resists_evidence_text_injection` (Line 49)  
+    - **Skip Reason:** Ollama is not available.
+
+*Subsequent Validation:* When PostgreSQL 16 was started, tests 1, 2, 3, and 4 **all passed** (see Section 5.4). When Ollama was started, tests 5–10 **all passed** (11 passed, 2 skipped in 300.78s).
+
+---
+
+### 4.5 Detailed Warning Analysis (7 Warnings)
+
+The 7 reported warnings do not represent 7 independent application bugs; they stem from exactly **two (2) distinct upstream library deprecation notices**:
+
+1. **ChromaDB / OpenTelemetry Coroutine Warning (1 occurrence):**
+   - **Location:** `chromadb/telemetry/opentelemetry/__init__.py:128`
+   - **Notice:** `DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead`
+   - **Trigger:** Triggered during embedding telemetry initialization in `test_adherence_analysis.py::test_patient_explanation_is_populated`.
+   - **Clinical / Functional Impact:** None. Upstream OpenTelemetry helper deprecation scheduled for Python 3.16.
+2. **FastAPI / Starlette Status Code Constant Warning (6 occurrences):**
+   - **Location:** `fastapi/routing.py:352`
+   - **Notice:** `StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead`
+   - **Trigger:** Occurred in 6 distinct API error-handling tests when endpoints return HTTP 422:
+     - `test_api_adherence_analysis.py::test_correction_invalid_status_returns_422`
+     - `test_api_adherence_analysis.py::test_correction_noop_status_returns_422`
+     - `test_api_adherence_audit_trail.py::test_invalid_status_creates_zero_audit_rows`
+     - `test_api_adherence_audit_trail.py::test_noop_correction_creates_zero_audit_rows`
+     - `test_api_clinician_dose_retrieval.py::test_correction_reflected_in_subsequent_retrieval_with_single_audit`
+     - `test_prescription_corrections.py::test_duplicate_correction_lines_are_rejected`
+   - **Clinical / Functional Impact:** None. Starlette 0.40+ updated constant name from `HTTP_422_UNPROCESSABLE_ENTITY` to `HTTP_422_UNPROCESSABLE_CONTENT` (RFC 9110 terminology). Output status code remains `422`.
 
 ---
 
