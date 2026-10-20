@@ -23,6 +23,21 @@ jobs:
       HF_TOKEN: "mock_ci_token"
       PYTHONPATH: "."
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: medassist_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -43,6 +58,14 @@ jobs:
         working-directory: ./backend
         run: |
           python -m pytest test_llm_router.py test_agent_endpoint.py test_merge_boundary.py -v
+
+      - name: Run Clinical Safety Acceptance & PostgreSQL Concurrency Tests
+        working-directory: ./backend
+        env:
+          POSTGRES_TEST_DATABASE_URL: "postgresql+asyncpg://postgres:postgres@localhost:5432/medassist_test"
+          TEST_DATABASE_URL: "postgresql+asyncpg://postgres:postgres@localhost:5432/medassist_test"
+        run: |
+          python -m pytest test_clinical_safety_acceptance.py test_postgres_concurrency.py test_api_adherence_transaction.py -v
 
       - name: Run E2E Adherence Lifecycle Verification
         working-directory: ./backend

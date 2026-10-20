@@ -1,0 +1,337 @@
+{
+  "version": "1.0.0",
+  "description": "Frozen Clinical RAG Benchmark Evaluation Dataset for MedAssist AI (FYP Academic Prototype)",
+  "corpus_description": "Curated FDA Package Inserts and Clinical Guidelines (sildenafil, warfarin, propranolol, metformin, clopidogrel, sertraline, lisinopril, amoxicillin)",
+  "benchmark_categories": [
+    "KNOWN_RELEVANT",
+    "UNKNOWN_OR_AMBIGUOUS",
+    "WRONG_DRUG_HARD_NEGATIVES",
+    "ABSENT_FROM_CORPUS"
+  ],
+  "cases": [
+    {
+      "id": "KR-01",
+      "category": "KNOWN_RELEVANT",
+      "query": "warfarin ibuprofen gastrointestinal bleeding interaction",
+      "drug_entity": "warfarin",
+      "expected_chunks": ["CHK-WAR-001"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Direct drug-drug interaction documented in FDA warfarin label Section 7."
+    },
+    {
+      "id": "KR-02",
+      "category": "KNOWN_RELEVANT",
+      "query": "sildenafil nitrates contraindicated hypotension",
+      "drug_entity": "sildenafil",
+      "expected_chunks": ["CHK-SIL-001", "CHK-SIL-002"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Direct contraindication and interaction documented in FDA sildenafil label Section 4 & 7."
+    },
+    {
+      "id": "KR-03",
+      "category": "KNOWN_RELEVANT",
+      "query": "propranolol bronchial asthma bronchospasm contraindication",
+      "drug_entity": "propranolol",
+      "expected_chunks": ["CHK-IND-001"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Direct condition-drug contraindication in FDA propranolol label Section 4."
+    },
+    {
+      "id": "KR-04",
+      "category": "KNOWN_RELEVANT",
+      "query": "metformin severe renal impairment lactic acidosis",
+      "drug_entity": "metformin",
+      "expected_chunks": ["CHK-MET-001"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Boxed warning and renal contraindication in FDA metformin label."
+    },
+    {
+      "id": "KR-05",
+      "category": "KNOWN_RELEVANT",
+      "query": "clopidogrel omeprazole CYP2C19 antiplatelet efficacy",
+      "drug_entity": "clopidogrel",
+      "expected_chunks": ["CHK-CLP-001"],
+      "should_have_evidence": true,
+      "clinical_rationale": "CYP2C19 interaction alert documented in FDA clopidogrel safety communication."
+    },
+    {
+      "id": "KR-06",
+      "category": "KNOWN_RELEVANT",
+      "query": "sertraline tramadol serotonin syndrome",
+      "drug_entity": "sertraline",
+      "expected_chunks": ["CHK-SRT-001"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Serotonin syndrome interaction documented in FDA sertraline label Section 7."
+    },
+    {
+      "id": "KR-07",
+      "category": "KNOWN_RELEVANT",
+      "query": "lisinopril spironolactone hyperkalemia renal failure",
+      "drug_entity": "lisinopril",
+      "expected_chunks": ["CHK-LSP-001"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Dual RAAS blockade hyperkalemia risk documented in AHA/ACC guideline Section 7.3."
+    },
+    {
+      "id": "KR-08",
+      "category": "KNOWN_RELEVANT",
+      "query": "amoxicillin penicillin anaphylaxis hypersensitivity",
+      "drug_entity": "amoxicillin",
+      "expected_chunks": ["CHK-AMX-001"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Penicillin hypersensitivity contraindication documented in FDA amoxicillin label Section 4."
+    },
+    {
+      "id": "KR-09",
+      "category": "KNOWN_RELEVANT",
+      "query": "warfarin bleeding aspirin clopidogrel antiplatelet",
+      "drug_entity": "warfarin",
+      "expected_chunks": ["CHK-WAR-002"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Hemorrhage warning with antiplatelet therapy in FDA warfarin label Section 4."
+    },
+    {
+      "id": "KR-10",
+      "category": "KNOWN_RELEVANT",
+      "query": "Propranolol Asthma CHRONIC_CONDITION contraindication Life-threatening bronchospasm",
+      "drug_entity": "propranolol",
+      "expected_chunks": ["CHK-IND-001"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Structured clinical engine query format for beta-blocker asthma contraindication."
+    },
+    {
+      "id": "KR-11",
+      "category": "KNOWN_RELEVANT",
+      "query": "Sildenafil Nitroglycerin interaction Additive vasodilation Severe hypotension",
+      "drug_entity": "sildenafil",
+      "expected_chunks": ["CHK-SIL-001", "CHK-SIL-002"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Structured clinical engine query format for nitrate-PDE5 interaction."
+    },
+    {
+      "id": "KR-12",
+      "category": "KNOWN_RELEVANT",
+      "query": "Warfarin Ibuprofen interaction Displaced protein binding Major bleeding risk",
+      "drug_entity": "warfarin",
+      "expected_chunks": ["CHK-WAR-001"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Structured clinical engine query format for NSAID-anticoagulant bleeding risk."
+    },
+    {
+      "id": "KR-13",
+      "category": "KNOWN_RELEVANT",
+      "query": "blood thinner bleeding risk",
+      "drug_entity": "warfarin",
+      "expected_chunks": ["CHK-WAR-001", "CHK-WAR-002"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Colloquial paraphrase mapping to canonical warfarin anticoagulant evidence."
+    },
+    {
+      "id": "KR-14",
+      "category": "KNOWN_RELEVANT",
+      "query": "sildenafil contraindicated",
+      "drug_entity": "sildenafil",
+      "expected_chunks": ["CHK-SIL-001", "CHK-SIL-002"],
+      "should_have_evidence": true,
+      "clinical_rationale": "Short query testing sufficiency threshold on primary contraindication."
+    },
+    {
+      "id": "UA-01",
+      "category": "UNKNOWN_OR_AMBIGUOUS",
+      "query": "Xylotroxin 50mg dosage and adverse drug reactions",
+      "drug_entity": "Xylotroxin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Completely synthetic/unknown drug name; must fail closed and abstain."
+    },
+    {
+      "id": "UA-02",
+      "category": "UNKNOWN_OR_AMBIGUOUS",
+      "query": "SyntheticMed-99 bleeding risks and contraindications",
+      "drug_entity": "SyntheticMed-99",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Synthetic adversarial drug token; must fail closed with zero retrieved chunks."
+    },
+    {
+      "id": "UA-03",
+      "category": "UNKNOWN_OR_AMBIGUOUS",
+      "query": "Zolpidem-XR drug interactions with antihistamines",
+      "drug_entity": "Zolpidem-XR",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Real pharmaceutical name that is uncatalogued in the FYP prototype corpus; must abstain."
+    },
+    {
+      "id": "UA-04",
+      "category": "UNKNOWN_OR_AMBIGUOUS",
+      "query": "water pill interaction",
+      "drug_entity": null,
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Ambiguous colloquial class name without specific drug entity; must abstain."
+    },
+    {
+      "id": "UA-05",
+      "category": "UNKNOWN_OR_AMBIGUOUS",
+      "query": "pain killer",
+      "drug_entity": null,
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Ambiguous non-specific colloquial term; must abstain."
+    },
+    {
+      "id": "UA-06",
+      "category": "UNKNOWN_OR_AMBIGUOUS",
+      "query": "coumadin",
+      "drug_entity": "warfarin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Single drug name without clinical condition or action; must fail sufficiency and abstain."
+    },
+    {
+      "id": "UA-07",
+      "category": "UNKNOWN_OR_AMBIGUOUS",
+      "query": "metformin",
+      "drug_entity": "metformin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Single drug name without clinical condition or action; must fail sufficiency and abstain."
+    },
+    {
+      "id": "WN-01",
+      "category": "WRONG_DRUG_HARD_NEGATIVES",
+      "query": "metformin gastrointestinal bleeding and INR elevation",
+      "drug_entity": "metformin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Bleeding and INR vocabulary belongs to warfarin; metformin candidate partition must not match."
+    },
+    {
+      "id": "WN-02",
+      "category": "WRONG_DRUG_HARD_NEGATIVES",
+      "query": "sildenafil severe renal impairment and lactic acidosis",
+      "drug_entity": "sildenafil",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Renal impairment and lactic acidosis vocabulary belongs to metformin; sildenafil must not match."
+    },
+    {
+      "id": "WN-03",
+      "category": "WRONG_DRUG_HARD_NEGATIVES",
+      "query": "propranolol omeprazole CYP2C19 antiplatelet inhibition",
+      "drug_entity": "propranolol",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "CYP2C19 and omeprazole vocabulary belongs to clopidogrel; propranolol must not match."
+    },
+    {
+      "id": "WN-04",
+      "category": "WRONG_DRUG_HARD_NEGATIVES",
+      "query": "amoxicillin nitroglycerin profound refractory hypotension",
+      "drug_entity": "amoxicillin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Nitroglycerin and refractory hypotension vocabulary belongs to sildenafil; amoxicillin must not match."
+    },
+    {
+      "id": "WN-05",
+      "category": "WRONG_DRUG_HARD_NEGATIVES",
+      "query": "lisinopril tramadol serotonin syndrome",
+      "drug_entity": "lisinopril",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Tramadol and serotonin syndrome vocabulary belongs to sertraline; lisinopril must not match."
+    },
+    {
+      "id": "WN-06",
+      "category": "WRONG_DRUG_HARD_NEGATIVES",
+      "query": "warfarin bronchial asthma bronchospasm",
+      "drug_entity": "warfarin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Asthma and bronchospasm vocabulary belongs to propranolol; warfarin must not match."
+    },
+    {
+      "id": "AC-01",
+      "category": "ABSENT_FROM_CORPUS",
+      "query": "metformin alopecia and hair thinning",
+      "drug_entity": "metformin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Metformin is known, but alopecia topic is absent from the curated evidence corpus."
+    },
+    {
+      "id": "AC-02",
+      "category": "ABSENT_FROM_CORPUS",
+      "query": "warfarin dental cavity protection and teeth cleaning",
+      "drug_entity": "warfarin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Warfarin is known, but dental prophylaxis topic is absent from the curated evidence corpus."
+    },
+    {
+      "id": "AC-03",
+      "category": "ABSENT_FROM_CORPUS",
+      "query": "sildenafil pediatric viral pneumonia and cough",
+      "drug_entity": "sildenafil",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Sildenafil is known, but pediatric pneumonia is absent from the curated evidence corpus."
+    },
+    {
+      "id": "AC-04",
+      "category": "ABSENT_FROM_CORPUS",
+      "query": "lisinopril migraine prophylaxis and headache prevention",
+      "drug_entity": "lisinopril",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Lisinopril is known, but migraine prevention is absent from the curated evidence corpus."
+    },
+    {
+      "id": "AC-05",
+      "category": "ABSENT_FROM_CORPUS",
+      "query": "propranolol treatment for poison ivy rash",
+      "drug_entity": "propranolol",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Propranolol is known, but dermatological poison ivy treatment is absent from corpus."
+    },
+    {
+      "id": "AC-06",
+      "category": "ABSENT_FROM_CORPUS",
+      "query": "aspirin bleeding risk in acute coronary syndrome",
+      "drug_entity": "aspirin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Aspirin is present only as a related interacting entity, not a standalone monograph; query must abstain."
+    },
+    {
+      "id": "AC-07",
+      "category": "ABSENT_FROM_CORPUS",
+      "query": "rivaroxaban clot prevention after orthopedic surgery",
+      "drug_entity": "rivaroxaban",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Rivaroxaban is not in the curated evidence corpus; query must abstain."
+    },
+    {
+      "id": "AC-08",
+      "category": "ABSENT_FROM_CORPUS",
+      "query": "insulin hypoglycemia emergency management",
+      "drug_entity": "insulin",
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Insulin is not in the curated evidence corpus; query must abstain."
+    },
+    {
+      "id": "AC-09",
+      "category": "ABSENT_FROM_CORPUS",
+      "query": "What is the capital of France?",
+      "drug_entity": null,
+      "expected_chunks": [],
+      "should_have_evidence": false,
+      "clinical_rationale": "Completely off-topic non-clinical general question; must abstain immediately."
+    }
+  ]
+}

@@ -82,6 +82,18 @@ def forbid_live_ollama_in_tests(request, monkeypatch):
 
 @pytest.fixture
 async def engine(tmp_path):
+    import os
+    custom_url = os.environ.get("TEST_DATABASE_URL")
+    if custom_url:
+        eng = create_async_engine(custom_url)
+        async with eng.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        yield eng
+        async with eng.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        await eng.dispose()
+        return
+
     url = f"sqlite+aiosqlite:///{tmp_path / 'test.db'}"
     eng = create_async_engine(url, connect_args={"check_same_thread": False})
 

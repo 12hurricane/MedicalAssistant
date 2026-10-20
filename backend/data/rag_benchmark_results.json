@@ -1,0 +1,116 @@
+{
+  "LEXICAL (BASELINE)": {
+    "mode": "LEXICAL (BASELINE)",
+    "total_cases": 36,
+    "positive_cases": 14,
+    "negative_cases": 22,
+    "true_positives": 13,
+    "false_positives": 0,
+    "true_negatives": 22,
+    "false_negatives": 1,
+    "recall_at_1": 0.8571428571428571,
+    "recall_at_3": 0.9285714285714286,
+    "precision_at_3": 0.7272727272727273,
+    "mrr_at_3": 0.8928571428571429,
+    "wrong_drug_rate": 0.0,
+    "abstention_precision": 0.9565217391304348,
+    "abstention_recall": 1.0,
+    "sufficiency_accuracy": 0.9722222222222222,
+    "category_stats": {
+      "KNOWN_RELEVANT": {
+        "total": 14,
+        "correct_decision": 13,
+        "hits_at_k": 13
+      },
+      "UNKNOWN_OR_AMBIGUOUS": {
+        "total": 7,
+        "correct_abstention": 7
+      },
+      "WRONG_DRUG_HARD_NEGATIVES": {
+        "total": 6,
+        "correct_abstention": 6,
+        "wrong_drug_leaks": 0
+      },
+      "ABSENT_FROM_CORPUS": {
+        "total": 9,
+        "correct_abstention": 9
+      }
+    }
+  },
+  "SEMANTIC": {
+    "mode": "SEMANTIC",
+    "total_cases": 36,
+    "positive_cases": 14,
+    "negative_cases": 22,
+    "true_positives": 13,
+    "false_positives": 0,
+    "true_negatives": 22,
+    "false_negatives": 1,
+    "recall_at_1": 0.9285714285714286,
+    "recall_at_3": 0.9285714285714286,
+    "precision_at_3": 0.7272727272727273,
+    "mrr_at_3": 0.9285714285714286,
+    "wrong_drug_rate": 0.0,
+    "abstention_precision": 0.9565217391304348,
+    "abstention_recall": 1.0,
+    "sufficiency_accuracy": 0.9722222222222222,
+    "category_stats": {
+      "KNOWN_RELEVANT": {
+        "total": 14,
+        "correct_decision": 13,
+        "hits_at_k": 13
+      },
+      "UNKNOWN_OR_AMBIGUOUS": {
+        "total": 7,
+        "correct_abstention": 7
+      },
+      "WRONG_DRUG_HARD_NEGATIVES": {
+        "total": 6,
+        "correct_abstention": 6,
+        "wrong_drug_leaks": 0
+      },
+      "ABSENT_FROM_CORPUS": {
+        "total": 9,
+        "correct_abstention": 9
+      }
+    }
+  },
+  "HYBRID (PRODUCTION)": {
+    "mode": "HYBRID (PRODUCTION)",
+    "total_cases": 36,
+    "positive_cases": 14,
+    "negative_cases": 22,
+    "true_positives": 13,
+    "false_positives": 0,
+    "true_negatives": 22,
+    "false_negatives": 1,
+    "recall_at_1": 0.9285714285714286,
+    "recall_at_3": 0.9285714285714286,
+    "precision_at_3": 0.7272727272727273,
+    "mrr_at_3": 0.9285714285714286,
+    "wrong_drug_rate": 0.0,
+    "abstention_precision": 0.9565217391304348,
+    "abstention_recall": 1.0,
+    "sufficiency_accuracy": 0.9722222222222222,
+    "category_stats": {
+      "KNOWN_RELEVANT": {
+        "total": 14,
+        "correct_decision": 13,
+        "hits_at_k": 13
+      },
+      "UNKNOWN_OR_AMBIGUOUS": {
+        "total": 7,
+        "correct_abstention": 7
+      },
+      "WRONG_DRUG_HARD_NEGATIVES": {
+        "total": 6,
+        "correct_abstention": 6,
+        "wrong_drug_leaks": 0
+      },
+      "ABSENT_FROM_CORPUS": {
+        "total": 9,
+        "correct_abstention": 9
+      }
+    }
+  }
+}
