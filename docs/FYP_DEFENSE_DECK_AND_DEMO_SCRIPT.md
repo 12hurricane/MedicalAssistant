@@ -82,13 +82,13 @@
 
 ## Slide 6: Human-in-the-Loop Override & Immutable Audit Logging
 * **Header:** Clinician Override & Regulatory Auditability
-* **Visual:** Entity-Relationship Diagram showing `medication_events` and the separate immutable `event_corrections` table.
+* **Visual:** Entity-Relationship Diagram showing `medication_events` and the separate immutable `medication_event_corrections` table.
 * **Audit Fields Stored:**
   * `correction_id` | `event_id` | `previous_status` | `new_status`
   * `clinical_reason` (Mandatory justification)
   * `corrected_by` (Clinician UID) | `corrected_at` (Immutable UTC timestamp)
 * **Speaker Script (45s):**
-  > "In clinical environments, mistakes happen: a patient might log a dose as skipped when they simply took it 45 minutes late. Rather than allowing raw edits to historical records, MedAssist implements an immutable Human-in-the-Loop audit pattern. The original record remains intact; an `event_corrections` record is appended with mandatory clinical justification, immediately recalculating the authoritative adherence score."
+  > "In clinical environments, mistakes happen: a patient might log a dose as skipped when they simply took it 45 minutes late. Rather than allowing raw edits to historical records, MedAssist implements an immutable Human-in-the-Loop audit pattern. The original record remains intact; a `medication_event_corrections` record is appended with mandatory clinical justification, immediately recalculating the authoritative adherence score."
 
 ---
 
@@ -308,15 +308,14 @@ A deterministic clinical safety alert triggered by rule violations, an evidence-
    - In Patient Chat (`http://localhost/#/patient/chat`), patient asks an everyday missed-dose question:
      > *"I missed my 8:00 AM Metformin dose and it's now 11:30 AM. Should I double up tonight?"*
 2. **System Behavior:**
-   - Hybrid retriever fetches authoritative FDA package insert chunks for Metformin (zero wrong-drug retrieval).
-   - Tier 1 Groq LPU router generates a response in **1.5 seconds**.
-   - Output explains the single-dose protocol grounded in FDA labeling, explicitly stating:
-     *"Take the missed dose as soon as you remember, unless it is close to your next scheduled dose. Do NOT double your dose tonight."*
+   - Active medications and RAG monograph context are injected into the backend prompt context.
+   - Tier 1 Groq LPU router generates a response in **~1.5 seconds**.
+   - Output enforces conservative safety guidance: explains administration context (taking with meals), strictly refuses to advise doubling, skipping, or altering doses, and explicitly directs the patient to their clinician for individualized medical instructions.
 3. **Examiner Observation:**
    - Deterministic safety alert requires zero LLM intervention.
-   - Conversational AI responds with sub-2s latency, evidence citations, and safe clinical guidance adhering to the single-dose rule.
+   - Conversational AI responds with sub-2s latency, delivering conservative, non-prescriptive safety guidance that refuses dangerous dose alterations.
 4. **Speaking Line:**
-   > *"Here is the clinical isolation principle in practice. The drug interaction alert was computed deterministically by our rule matrix. When the patient asked about their missed dose, our hybrid RAG fetched FDA-grounded labeling, and Tier 1 Groq delivered a safe, empathetic explanation in 1.5 seconds—explicitly forbidding double-dosing."*
+   > *"Here is the clinical isolation principle in practice. The drug interaction alert was computed deterministically by our rule matrix. When the patient asked about their missed dose, our conversational assistant delivered conservative safety guidance in 1.5 seconds—reinforcing food-administration best practices while strictly refusing to alter or double doses, and directing the patient to their healthcare provider."*
 
 #### 3B. Controlled Failure Scenario (Fail-Closed Path: Adversarial Jailbreak & Regex Interception)
 1. **Action:**
@@ -352,13 +351,13 @@ Clinician inspection of the patient roster, drill-down into adherence history, e
      *"Patient confirmed taking dose with food at 08:45 PM; nausea resolved."*
    - Submits correction.
 2. **System Behavior:**
-   - Backend updates event status and appends an immutable entry to `event_corrections` table (`previous_status="SKIPPED"`, `new_status="TAKEN"`, `corrected_by=<clinician_id>`, `corrected_at=<timestamp>`, `clinical_reason`).
+   - Backend updates event status and appends an immutable entry to `medication_event_corrections` table (`previous_status="SKIPPED"`, `new_status="TAKEN"`, `corrected_by=<clinician_id>`, `corrected_at=<timestamp>`, `clinical_reason`).
    - Adherence calculation re-evaluates the patient's record, dynamically restoring the score to **100%**.
 3. **Examiner Observation:**
    - Original historical event remains intact; correction is appended with full clinician attribution.
    - Adherence score recalculates in real time, and the patient's review flag clears.
 4. **Speaking Line:**
-   > *"This is our Human-in-the-Loop oversight workflow. The clinician sees the non-adherent patient, reviews the barrier, and submits an authoritative correction with a clinical rationale. The original event is preserved for auditability, an immutable correction record is logged, and the adherence score is deterministically recalculated to 100%."*
+   > *"This is our Human-in-the-Loop oversight workflow. The clinician sees the non-adherent patient, reviews the barrier, and submits an authoritative correction with a clinical rationale. The original event is preserved for auditability, an immutable correction record is logged in medication_event_corrections, and the adherence score is deterministically recalculated to 100%."*
 
 #### 4B. Controlled Failure Scenario (Fail-Closed Path: Mandatory Justification Validation & Concurrency Serialization)
 1. **Action:**
@@ -420,7 +419,7 @@ cd "D:\AI\Ai assistent for medication\backend"
 
 ### Question 4 (Audit Trail & Concurrency): "How does the system guarantee audit integrity and prevent race conditions during concurrent clinician actions?"
 * **Authoritative Defense Answer:**
-  > "We enforce an immutable append-only audit architecture backed by PostgreSQL 16 row-level locking (`SELECT ... FOR UPDATE`). When a clinician modifies a dose status, the original `medication_events` row is never erased; instead, an entry is appended to `event_corrections` with the clinician's ID, UTC timestamp, and mandatory clinical justification. Concurrency tests empirically verify that simultaneous conflicting edits are serialized, preventing race conditions or audit forks, and returning HTTP 422 if an invalid transition is attempted."
+  > "We enforce an immutable append-only audit architecture backed by PostgreSQL 16 row-level locking (`SELECT ... FOR UPDATE`). When a clinician modifies a dose status, the original `medication_events` row is never erased; instead, an entry is appended to `medication_event_corrections` with the clinician's ID, UTC timestamp, and mandatory clinical justification. Concurrency tests empirically verify that simultaneous conflicting edits are serialized, preventing race conditions or audit forks, and returning HTTP 422 if an invalid transition is attempted."
 
 ---
 

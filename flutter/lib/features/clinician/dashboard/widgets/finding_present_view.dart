@@ -36,6 +36,17 @@ class _FindingPresentViewState extends ConsumerState<FindingPresentView> {
     );
   }
 
+  String _bannerTitle() {
+    final level = widget.analysis.safetyRiskLevel.toUpperCase();
+    if (level == 'HIGH' || level == 'CRITICAL') {
+      return '1 High-Risk Finding Requires Triage';
+    } else if (level == 'MODERATE') {
+      return '1 Moderate Finding Requires Clinical Review';
+    } else {
+      return '1 Safety Finding Flagged for Review';
+    }
+  }
+
   Widget _buildCriticalBanner() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -52,11 +63,11 @@ class _FindingPresentViewState extends ConsumerState<FindingPresentView> {
               children: [
                 const Icon(Icons.priority_high, color: Color(0xFFBA1A1A), size: 20),
                 const SizedBox(width: 8),
-                const Flexible(
+                Flexible(
                   child: Text(
-                    '1 Critical Finding Requires Triage',
+                    _bannerTitle(),
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.2,
@@ -142,7 +153,7 @@ class _FindingPresentViewState extends ConsumerState<FindingPresentView> {
               ),
               const SizedBox(width: 8),
               Text(
-                'CRITICALITY: ${widget.analysis.safetyRiskLevel.toUpperCase()}',
+                'SEVERITY: ${widget.analysis.safetyRiskLevel.toUpperCase()}',
                 style: TextStyle(
                   fontFamily: 'JetBrains Mono',
                   fontSize: 11,

@@ -361,7 +361,7 @@ class _PatientHeader extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     const Text(
-                      'LIVE EHR',
+                      'SYNCED',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -374,7 +374,7 @@ class _PatientHeader extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Synced with Clinic EHR',
+                'Connected to MedAssist Backend',
                 style: TextStyle(
                   fontSize: 10,
                   color: AppColors.textSecondary,
