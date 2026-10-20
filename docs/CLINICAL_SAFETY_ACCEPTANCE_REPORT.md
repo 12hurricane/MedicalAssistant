@@ -56,34 +56,63 @@ The acceptance criteria, architectural gates, and verification suites for MedAss
 
 All commands and test suites must be executed in their respective directories using the verified virtual environment interpreter:
 
-- **Repository Root:** `D:\AI\Ai assistent for medication`
-- **Backend Working Directory:** `D:\AI\Ai assistent for medication\backend`
-- **Verified Python Interpreter:** `D:\AI\Ai assistent for medication\backend\venv\Scripts\python.exe`
+- **Repository Root:** `<repo_root>` (Relative workspace root: `./` or cloned directory)
+- **Backend Directory:** `<repo_root>/backend`
+- **Virtual Environment Location:** `<repo_root>/backend/venv`
+- **Interpreter Path:**
+  - **Windows (PowerShell / CMD):** `.\backend\venv\Scripts\python.exe` (or `.\venv\Scripts\python.exe` from `backend/`)
+  - **Linux / macOS (POSIX Bash):** `./backend/venv/bin/python` (or `./venv/bin/python` from `backend/`)
 - **Runtime Versions:** Python `3.14.7` | pytest `9.1.1` | pluggy `1.6.0` | anyio `4.14.2` | asyncio `1.4.0`
 
-#### Exact Reproducible Commands (PowerShell)
+#### Portable Reproduction Commands (PowerShell / Windows)
 
 ```powershell
-# 1. Verify Git Commit from Repository Root
-cd "D:\AI\Ai assistent for medication"
-git status
-git rev-parse HEAD
-git log -1 --oneline
+# 1. Checkout Tested Baseline Commit
+git checkout 3ceb4d7
 
-# 2. Check Python and Pytest Versions
-cd "D:\AI\Ai assistent for medication\backend"
+# 2. Verify Commit SHA and Working Tree State
+git rev-parse HEAD        # Expected: 3ceb4d7...
+git status --short
+
+# 3. Enter Backend Directory
+cd backend
+
+# 4. Verify Interpreter and Pytest Versions
 .\venv\Scripts\python.exe --version
 .\venv\Scripts\python.exe -m pytest --version
 
-# 3. Full Backend Regression Run (Original Baseline)
-cd "D:\AI\Ai assistent for medication\backend"
+# 5. Full Backend Regression Run (Original SQLite Baseline)
 .\venv\Scripts\python.exe -m pytest -ra --tb=short
 
-# 4. Verified PostgreSQL 16 Concurrency Run (Requires running PostgreSQL 16 container)
-cd "D:\AI\Ai assistent for medication\backend"
+# 6. Verified PostgreSQL 16 Concurrency Run (Requires running PostgreSQL 16 container)
 $env:TEST_DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/medassist_test"
 $env:POSTGRES_TEST_DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/medassist_test"
 .\venv\Scripts\python.exe -m pytest test_postgres_concurrency.py test_api_adherence_transaction.py -v
+```
+
+#### Portable Reproduction Commands (POSIX / Bash)
+
+```bash
+# 1. Checkout Tested Baseline Commit
+git checkout 3ceb4d7
+
+# 2. Verify Commit SHA
+git rev-parse HEAD        # Expected: 3ceb4d7...
+
+# 3. Enter Backend Directory
+cd backend
+
+# 4. Verify Interpreter and Pytest Versions
+./venv/bin/python --version
+./venv/bin/python -m pytest --version
+
+# 5. Full Backend Regression Run (Original SQLite Baseline)
+./venv/bin/python -m pytest -ra --tb=short
+
+# 6. Verified PostgreSQL 16 Concurrency Run (Requires running PostgreSQL 16 container)
+export TEST_DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/medassist_test"
+export POSTGRES_TEST_DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/medassist_test"
+./venv/bin/python -m pytest test_postgres_concurrency.py test_api_adherence_transaction.py -v
 ```
 
 ---
@@ -174,7 +203,7 @@ test_prescription_corrections.py::test_duplicate_correction_lines_are_rejected
 
 | Metric | Measured Total | Reconciled Audit Status | Source / Verification Details |
 | :--- | :---: | :---: | :--- |
-| **Collected Tests** | **441** | **Verified** | Discovered across 35 test files in backend test suite |
+| **Collected Tests** | **441** | **Verified** | Discovered across 44 test files in backend test suite |
 | **Passed Tests** | **431** | **Verified** | Deterministic safety rules, scheduling, auth, RAG boundaries |
 | **Failed Tests** | **0** | **Verified** | Zero assertion failures or HTTP 500 runtime errors |
 | **Skipped Tests** | **10** | **Verified** | Exactly 10 skips across 3 test modules (itemized below) |
