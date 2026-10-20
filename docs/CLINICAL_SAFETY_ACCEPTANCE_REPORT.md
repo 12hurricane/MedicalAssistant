@@ -58,16 +58,20 @@ All commands and test suites must be executed in their respective directories us
 
 - **Repository Root:** `<repo_root>` (Relative workspace root: `./` or cloned directory)
 - **Backend Directory:** `<repo_root>/backend`
-- **Virtual Environment Location:** `<repo_root>/backend/venv`
+- **Virtual Environment Location:** `<repo_root>/backend/venv` (Created via `python -m venv venv` and initialized via `pip install -r requirements.txt`)
 - **Interpreter Path:**
   - **Windows (PowerShell / CMD):** `.\backend\venv\Scripts\python.exe` (or `.\venv\Scripts\python.exe` from `backend/`)
   - **Linux / macOS (POSIX Bash):** `./backend/venv/bin/python` (or `./venv/bin/python` from `backend/`)
 - **Runtime Versions:** Python `3.14.7` | pytest `9.1.1` | pluggy `1.6.0` | anyio `4.14.2` | asyncio `1.4.0`
 
+> **Reviewer Prerequisites & Detached HEAD Note:**  
+> 1. Commands assume the reviewer starts in the repository root and has initialized the virtual environment at `backend/venv`.  
+> 2. `git checkout 3ceb4d7` intentionally places Git in a **detached HEAD state** to ensure clean, read-only reproduction of the evaluated source-code snapshot without affecting current working branches.
+
 #### Portable Reproduction Commands (PowerShell / Windows)
 
 ```powershell
-# 1. Checkout Tested Baseline Commit
+# 1. Checkout Tested Baseline Commit (enters detached HEAD for test reproduction)
 git checkout 3ceb4d7
 
 # 2. Verify Commit SHA and Working Tree State
