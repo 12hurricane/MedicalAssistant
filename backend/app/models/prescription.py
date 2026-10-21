@@ -1,9 +1,14 @@
 from datetime import date, datetime
-from typing import List
+from typing import List, TYPE_CHECKING
 from sqlalchemy import ForeignKey, String, Date, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 from app.models.types import UTCDateTime
+
+if TYPE_CHECKING:
+    from app.models.patient import Patient
+    from app.models.prescribed_medication import PrescribedMedication
+    from app.models.user import User
 
 class Prescription(TimestampMixin, Base):
     __tablename__ = "prescriptions"

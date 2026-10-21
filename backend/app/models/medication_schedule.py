@@ -1,6 +1,6 @@
 import enum
 from datetime import date, time
-from typing import List
+from typing import List, TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint,
@@ -13,6 +13,12 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.medication_event import MedicationEvent
+    from app.models.patient import Patient
+    from app.models.prescribed_medication import PrescribedMedication
+    from app.models.reminder import Reminder
 
 
 class ScheduleLifecycle(str, enum.Enum):

@@ -1,6 +1,10 @@
+from typing import TYPE_CHECKING
 from sqlalchemy import String, Boolean, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.patient import Patient
 
 class User(TimestampMixin, Base):
     __tablename__ = "users"

@@ -1,8 +1,12 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, JSON, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 from app.models.types import UTCDateTime
+
+if TYPE_CHECKING:
+    from app.models.medication_schedule import MedicationSchedule
 
 class ScheduleVersion(TimestampMixin, Base):
     __tablename__ = "schedule_versions"

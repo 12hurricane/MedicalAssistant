@@ -1,8 +1,13 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 from app.models.types import UTCDateTime
+
+if TYPE_CHECKING:
+    from app.models.patient import Patient
+    from app.models.user import User
 
 class ConsentRecord(TimestampMixin, Base):
     __tablename__ = "consent_records"

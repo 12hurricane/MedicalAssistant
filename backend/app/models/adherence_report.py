@@ -1,7 +1,11 @@
 from datetime import date
+from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, Date, Float, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.patient import Patient
 
 class AdherenceReport(TimestampMixin, Base):
     __tablename__ = "adherence_reports"

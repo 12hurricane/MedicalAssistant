@@ -1,9 +1,20 @@
 from datetime import date
-from typing import List
+from typing import List, TYPE_CHECKING
 from sqlalchemy import ForeignKey, String, Date
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import JSON
 from app.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.adherence_report import AdherenceReport
+    from app.models.consent import ConsentRecord
+    from app.models.follow_up_task import FollowUpTask
+    from app.models.medication_event import MedicationEvent
+    from app.models.medication_schedule import MedicationSchedule
+    from app.models.prescribed_medication import PrescribedMedication
+    from app.models.prescription import Prescription
+    from app.models.reminder import Reminder
+    from app.models.user import User
 
 class Patient(TimestampMixin, Base):
     __tablename__ = "patients"

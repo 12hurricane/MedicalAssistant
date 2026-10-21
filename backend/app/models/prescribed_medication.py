@@ -1,7 +1,13 @@
-from typing import List
+from typing import List, TYPE_CHECKING
 from sqlalchemy import ForeignKey, String, Text, Boolean, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.medication import Medication
+    from app.models.medication_schedule import MedicationSchedule
+    from app.models.patient import Patient
+    from app.models.prescription import Prescription
 
 class PrescribedMedication(TimestampMixin, Base):
     __tablename__ = "prescribed_medications"

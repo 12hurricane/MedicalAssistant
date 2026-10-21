@@ -1,9 +1,15 @@
 import enum
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, String, Index, Integer, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 from app.models.types import UTCDateTime
+
+if TYPE_CHECKING:
+    from app.models.medication_event import MedicationEvent
+    from app.models.medication_schedule import MedicationSchedule
+    from app.models.patient import Patient
 
 
 class ReminderStatus(str, enum.Enum):
